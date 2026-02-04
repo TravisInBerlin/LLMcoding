@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Photeditor - A modern, AI-powered web-based photo editor. Edit photos with ease using one-click background removal, smart filters, and intuitive adjustments." />
+  <meta name="keywords"
+    content="photo editor, AI photo editor, background removal, image editor, online photo editor" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>Photeditor - AI Photo Editor</title>
+</head>
+
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+        <span class="logo-text">Photeditor</span>
+      </div>
+      <div class="toolbar">
+        <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 7v6h6" />
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 7v6h-6" />
+            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+          </svg>
+        </button>
+        <div class="toolbar-divider"></div>
+        <button class="toolbar-btn" id="resetBtn" title="Reset Image" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
+        <button class="toolbar-btn primary" id="exportBtn" title="Export Image" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Export</span>
+        </button>
+      </div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Tool Panel (Left) -->
+      <aside class="tool-panel">
+        <div class="tool-section">
+          <h3 class="tool-section-title">Transform</h3>
+          <div class="tool-grid">
+            <button class="tool-btn" id="cropBtn" title="Crop">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" />
+                <path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" />
+              </svg>
+              <span>Crop</span>
+            </button>
+            <button class="tool-btn" id="rotateLeftBtn" title="Rotate Left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2.5 2v6h6" />
+                <path d="M2.65 12a9 9 0 0 0 16.99 3.38" />
+                <path d="M2.65 12a9 9 0 0 1 2.5-6.35L2.5 2" />
+              </svg>
+              <span>Rotate L</span>
+            </button>
+            <button class="tool-btn" id="rotateRightBtn" title="Rotate Right">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6" />
+                <path d="M21.35 12a9 9 0 0 1-16.99 3.38" />
+                <path d="M21.35 12a9 9 0 0 0-2.5-6.35L21.5 2" />
+              </svg>
+              <span>Rotate R</span>
+            </button>
+            <button class="tool-btn" id="flipHBtn" title="Flip Horizontal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3" />
+                <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+              </svg>
+              <span>Flip H</span>
+            </button>
+            <button class="tool-btn" id="flipVBtn" title="Flip Vertical">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 8V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+              </svg>
+              <span>Flip V</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tool-section ai-section">
+          <h3 class="tool-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ai-icon">
+              <path
+                d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
+              <circle cx="7.5" cy="14.5" r="1.5" />
+              <circle cx="16.5" cy="14.5" r="1.5" />
+            </svg>
+            AI Tools
+          </h3>
+          <div class="tool-grid">
+            <button class="tool-btn ai-tool" id="removeBgBtn" title="Remove Background">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" />
+                <path d="M9 9h6" />
+                <path d="M9 13h6" />
+                <path d="M9 17h4" />
+              </svg>
+              <span>Remove BG</span>
+            </button>
+            <button class="tool-btn ai-tool" id="autoEnhanceBtn" title="Auto Enhance">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>Enhance</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tool-section">
+          <h3 class="tool-section-title">Overlay</h3>
+          <div class="tool-grid">
+            <button class="tool-btn" id="addTextBtn" title="Add Text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 7 4 4 20 4 20 7" />
+                <line x1="9" y1="20" x2="15" y2="20" />
+                <line x1="12" y1="4" x2="12" y2="20" />
+              </svg>
+              <span>Text</span>
+            </button>
+            <button class="tool-btn" id="addShapeBtn" title="Add Shape">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              </svg>
+              <span>Shape</span>
+            </button>
+            <button class="tool-btn" id="addCircleBtn" title="Add Circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              <span>Circle</span>
+            </button>
+            <button class="tool-btn" id="addArrowBtn" title="Add Arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+              <span>Arrow</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Canvas Area (Center) -->
+      <section class="canvas-area">
+        <div class="canvas-container" id="canvasContainer">
+          <!-- Drop Zone (shown when no image) -->
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-content">
+              <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <h2>Drop your image here</h2>
+              <p>or click to browse</p>
+              <span class="drop-hint">Supports JPG, PNG, WebP</span>
+              <input type="file" id="fileInput" accept="image/*" hidden />
+            </div>
+          </div>
+
+          <!-- Canvas (shown when image loaded) -->
+          <canvas id="mainCanvas" class="hidden"></canvas>
+
+          <!-- Comparison Slider -->
+          <div class="comparison-slider hidden" id="comparisonSlider">
+            <div class="comparison-handle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8l4 4-4 4" />
+                <path d="M6 8l-4 4 4 4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="zoom-controls" id="zoomControls">
+          <button class="zoom-btn" id="zoomOutBtn" title="Zoom Out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </button>
+          <span class="zoom-level" id="zoomLevel">100%</span>
+          <button class="zoom-btn" id="zoomInBtn" title="Zoom In">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="11" y1="8" x2="11" y2="14" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </button>
+          <button class="zoom-btn" id="zoomFitBtn" title="Fit to Screen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Panel -->
+    <footer class="bottom-panel">
+      <!-- Tab Navigation -->
+      <div class="panel-tabs">
+        <button class="panel-tab active" data-tab="adjustments">Adjustments</button>
+        <button class="panel-tab" data-tab="filters">Filters</button>
+      </div>
+
+      <!-- Adjustments Panel -->
+      <div class="panel-content active" id="adjustmentsPanel">
+        <div class="adjustments-grid">
+          <div class="adjustment-control">
+            <label>
+              <span>Brightness</span>
+              <span class="value" id="brightnessValue">0</span>
+            </label>
+            <input type="range" id="brightness" min="-100" max="100" value="0" class="slider" />
+          </div>
+          <div class="adjustment-control">
+            <label>
+              <span>Contrast</span>
+              <span class="value" id="contrastValue">0</span>
+            </label>
+            <input type="range" id="contrast" min="-100" max="100" value="0" class="slider" />
+          </div>
+          <div class="adjustment-control">
+            <label>
+              <span>Saturation</span>
+              <span class="value" id="saturationValue">0</span>
+            </label>
+            <input type="range" id="saturation" min="-100" max="100" value="0" class="slider" />
+          </div>
+          <div class="adjustment-control">
+            <label>
+              <span>Exposure</span>
+              <span class="value" id="exposureValue">0</span>
+            </label>
+            <input type="range" id="exposure" min="-100" max="100" value="0" class="slider" />
+          </div>
+          <div class="adjustment-control">
+            <label>
+              <span>Highlights</span>
+              <span class="value" id="highlightsValue">0</span>
+            </label>
+            <input type="range" id="highlights" min="-100" max="100" value="0" class="slider" />
+          </div>
+          <div class="adjustment-control">
+            <label>
+              <span>Shadows</span>
+              <span class="value" id="shadowsValue">0</span>
+            </label>
+            <input type="range" id="shadows" min="-100" max="100" value="0" class="slider" />
+          </div>
+          <div class="adjustment-control">
+            <label>
+              <span>Temperature</span>
+              <span class="value" id="temperatureValue">0</span>
+            </label>
+            <input type="range" id="temperature" min="-100" max="100" value="0" class="slider" />
+          </div>
+          <div class="adjustment-control">
+            <label>
+              <span>Sharpness</span>
+              <span class="value" id="sharpnessValue">0</span>
+            </label>
+            <input type="range" id="sharpness" min="0" max="100" value="0" class="slider" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters Panel -->
+      <div class="panel-content" id="filtersPanel">
+        <div class="filters-grid">
+          <button class="filter-btn active" data-filter="none">
+            <div class="filter-preview original"></div>
+            <span>Original</span>
+          </button>
+          <button class="filter-btn" data-filter="vintage">
+            <div class="filter-preview vintage"></div>
+            <span>Vintage</span>
+          </button>
+          <button class="filter-btn" data-filter="bw">
+            <div class="filter-preview bw"></div>
+            <span>B&W</span>
+          </button>
+          <button class="filter-btn" data-filter="sepia">
+            <div class="filter-preview sepia"></div>
+            <span>Sepia</span>
+          </button>
+          <button class="filter-btn" data-filter="vibrant">
+            <div class="filter-preview vibrant"></div>
+            <span>Vibrant</span>
+          </button>
+          <button class="filter-btn" data-filter="warm">
+            <div class="filter-preview warm"></div>
+            <span>Warm</span>
+          </button>
+          <button class="filter-btn" data-filter="cool">
+            <div class="filter-preview cool"></div>
+            <span>Cool</span>
+          </button>
+          <button class="filter-btn" data-filter="dramatic">
+            <div class="filter-preview dramatic"></div>
+            <span>Dramatic</span>
+          </button>
+          <button class="filter-btn" data-filter="fade">
+            <div class="filter-preview fade"></div>
+            <span>Fade</span>
+          </button>
+          <button class="filter-btn" data-filter="noir">
+            <div class="filter-preview noir"></div>
+            <span>Noir</span>
+          </button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Export Modal -->
+    <div class="modal hidden" id="exportModal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h2>Export Image</h2>
+        <div class="export-options">
+          <div class="export-option">
+            <label>Format</label>
+            <div class="format-buttons">
+              <button class="format-btn active" data-format="png">PNG</button>
+              <button class="format-btn" data-format="jpeg">JPEG</button>
+              <button class="format-btn" data-format="webp">WebP</button>
+            </div>
+          </div>
+          <div class="export-option quality-option">
+            <label>Quality: <span id="qualityValue">90</span>%</label>
+            <input type="range" id="qualitySlider" min="10" max="100" value="90" class="slider" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn secondary" id="cancelExport">Cancel</button>
+          <button class="btn primary" id="confirmExport">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loadingOverlay">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p id="loadingText">Processing...</p>
+      </div>
+    </div>
+
+    <!-- Crop Modal -->
+    <div class="modal hidden" id="cropModal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content crop-modal-content">
+        <h2>Crop Image</h2>
+        <div class="crop-container" id="cropContainer">
+          <canvas id="cropCanvas"></canvas>
+          <div class="crop-overlay" id="cropOverlay">
+            <div class="crop-selection" id="cropSelection">
+              <div class="crop-handle nw"></div>
+              <div class="crop-handle ne"></div>
+              <div class="crop-handle sw"></div>
+              <div class="crop-handle se"></div>
+            </div>
+          </div>
+        </div>
+        <div class="crop-presets">
+          <button class="preset-btn active" data-aspect="free">Free</button>
+          <button class="preset-btn" data-aspect="1:1">1:1</button>
+          <button class="preset-btn" data-aspect="4:3">4:3</button>
+          <button class="preset-btn" data-aspect="16:9">16:9</button>
+          <button class="preset-btn" data-aspect="3:2">3:2</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn secondary" id="cancelCrop">Cancel</button>
+          <button class="btn primary" id="applyCrop">Apply Crop</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Text Modal -->
+    <div class="modal hidden" id="textModal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h2>Add Text</h2>
+        <div class="text-options">
+          <div class="text-option">
+            <label>Text Content</label>
+            <input type="text" id="textInput" placeholder="Enter your text..." class="text-input" />
+          </div>
+          <div class="text-option">
+            <label>Font Size: <span id="fontSizeValue">32</span>px</label>
+            <input type="range" id="fontSizeSlider" min="12" max="120" value="32" class="slider" />
+          </div>
+          <div class="text-option">
+            <label>Color</label>
+            <div class="color-options">
+              <input type="color" id="textColor" value="#ffffff" class="color-picker" />
+              <div class="color-presets">
+                <button class="color-preset" data-color="#ffffff" style="background:#ffffff"></button>
+                <button class="color-preset" data-color="#000000" style="background:#000000"></button>
+                <button class="color-preset" data-color="#ff4444" style="background:#ff4444"></button>
+                <button class="color-preset" data-color="#44ff44" style="background:#44ff44"></button>
+                <button class="color-preset" data-color="#4444ff" style="background:#4444ff"></button>
+                <button class="color-preset" data-color="#ffff44" style="background:#ffff44"></button>
+              </div>
+            </div>
+          </div>
+          <div class="text-option">
+            <label>Font Style</label>
+            <div class="font-style-options">
+              <button class="style-btn" id="boldBtn" title="Bold"><strong>B</strong></button>
+              <button class="style-btn" id="italicBtn" title="Italic"><em>I</em></button>
+              <button class="style-btn" id="outlineBtn" title="Outline">O</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn secondary" id="cancelText">Cancel</button>
+          <button class="btn primary" id="confirmText">Add Text</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shape Modal -->
+    <div class="modal hidden" id="shapeModal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h2>Add Shape</h2>
+        <div class="shape-options">
+          <div class="shape-option">
+            <label>Shape Type</label>
+            <div class="shape-types">
+              <button class="shape-type-btn active" data-shape="rectangle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                </svg>
+              </button>
+              <button class="shape-type-btn" data-shape="circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                </svg>
+              </button>
+              <button class="shape-type-btn" data-shape="arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </button>
+              <button class="shape-type-btn" data-shape="line">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="19" x2="19" y2="5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="shape-option">
+            <label>Stroke Width: <span id="strokeWidthValue">3</span>px</label>
+            <input type="range" id="strokeWidthSlider" min="1" max="20" value="3" class="slider" />
+          </div>
+          <div class="shape-option">
+            <label>Stroke Color</label>
+            <input type="color" id="strokeColor" value="#ff4444" class="color-picker" />
+          </div>
+          <div class="shape-option">
+            <label>Fill</label>
+            <div class="fill-option">
+              <input type="checkbox" id="shapeFill" />
+              <input type="color" id="fillColor" value="#ff444466" class="color-picker" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn secondary" id="cancelShape">Cancel</button>
+          <button class="btn primary" id="confirmShape">Add Shape</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
