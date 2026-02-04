@@ -1,0 +1,10 @@
+{
+  "name": "cheetsheet",
+  "version": "1.0.0",
+  "description": "Cheat sheets for VIM, nano, Mac OS Finder, and Git in TypeScript",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsc && node dist/index.js"
+  },
+  "dependencies": {}
+}

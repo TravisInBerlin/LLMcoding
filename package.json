@@ -1,0 +1,13 @@
+{
+  "name": "cheetsheet",
+  "version": "1.0.0",
+  "description": "Cheat sheets for VIM, nano, Mac OS finder, Git in TypeScript",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@types/node": "^18.7.4",  # Example type definition
+    "typescript": "^4.6.2"     # Example TypeScript version
+  }
+}
