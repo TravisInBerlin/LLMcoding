@@ -82,14 +82,15 @@ export class MixerUI {
 
                   <div class="meter-fader-stack">
                     <div class="meter-stack">
-                      <span class="meter-label">VU</span>
+                      <span class="meter-label" title="Output level meter">VU</span>
                       <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="86" title="Output meter"></canvas>
                     </div>
                     <div class="fader-stack">
-                      <span class="meter-label">VOL</span>
+                      <span class="meter-label" title="Channel volume fader">VOL</span>
                       <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical" title="Channel volume">
                       <span class="meter-value" id="vol-value-${deck.id}">80%</span>
                     </div>
+                    <div class="meter-note">VU=出力レベル / VOL=チャンネル音量</div>
                   </div>
                 </div>
               </div>
