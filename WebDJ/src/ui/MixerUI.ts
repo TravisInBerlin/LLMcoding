@@ -53,8 +53,10 @@ export class MixerUI {
                 <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
               </div>
 
-              <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="120"></canvas>
-              <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical">
+              <div class="meter-fader-stack">
+                <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="120"></canvas>
+                <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical">
+              </div>
             </div>
           `,
             )

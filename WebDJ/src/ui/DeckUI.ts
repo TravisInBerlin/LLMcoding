@@ -63,6 +63,7 @@ export class DeckUI {
               <div class="jog-dot"></div>
               <div class="jog-label">${side}</div>
             </div>
+            <div class="platter-label">DISC</div>
           </div>
 
           <div class="transport-controls performance-layout">

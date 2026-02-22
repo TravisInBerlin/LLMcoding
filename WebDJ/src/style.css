@@ -233,6 +233,7 @@ body {
   flex-direction: column;
   gap: 6px;
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.38);
+  overflow: hidden;
 }
 
 .deck-a {
@@ -317,25 +318,34 @@ body {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: 86px 1fr 46px;
+  grid-template-columns: 98px 1fr 44px;
   gap: 8px;
+  overflow: hidden;
 }
 
 .jog-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 4px;
 }
 
 .jog-wheel {
-  width: 82px;
-  height: 82px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   border: 1px solid var(--line-strong);
   background: radial-gradient(circle at 30% 20%, rgba(138, 167, 245, 0.6), rgba(9, 14, 30, 0.93));
   position: relative;
   cursor: grab;
   touch-action: none;
+}
+
+.platter-label {
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  color: rgba(210, 226, 255, 0.78);
 }
 
 .jog-wheel:active {
@@ -367,6 +377,9 @@ body {
   display: grid;
   grid-template-rows: auto auto auto 1fr auto;
   gap: 5px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .transport-row,
@@ -398,8 +411,8 @@ body {
 .cue-grid {
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .pad-section {
@@ -440,7 +453,7 @@ body {
 
 .pitch-slider {
   width: 7px;
-  height: 58px;
+  height: 56px;
 }
 
 .volume-fader {
@@ -512,8 +525,8 @@ body {
 
 .btn-hot-cue {
   padding: 0;
-  min-height: 20px;
-  font-size: 10px;
+  min-height: 18px;
+  font-size: 9px;
 }
 
 .btn-hot-cue.active {
@@ -565,18 +578,11 @@ body {
   border-radius: var(--r-md);
   padding: 5px;
   background: var(--panel-2);
-  display: grid;
-  grid-template-columns: 1fr 16px;
-  grid-template-rows: auto auto auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-}
-
-.mixer-channel > .channel-label,
-.mixer-channel > .eq-group,
-.mixer-channel > .stems-group,
-.mixer-channel > .fx-selector,
-.mixer-channel > .neural-fx-row {
-  grid-column: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .channel-label {
@@ -641,19 +647,23 @@ body {
 }
 
 .vu-meter {
-  width: 14px;
-  height: 96px;
+  width: 18px;
+  height: 80px;
   border-radius: 5px;
   border: 1px solid var(--line);
-  justify-self: end;
-  grid-column: 2;
-  grid-row: 2 / span 4;
+}
+
+.meter-fader-stack {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .volume-fader {
-  grid-column: 2;
-  grid-row: 6;
-  justify-self: end;
+  width: 10px;
+  height: 92px;
 }
 
 .crossfader-section {
