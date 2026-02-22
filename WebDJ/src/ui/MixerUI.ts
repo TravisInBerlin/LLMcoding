@@ -1,14 +1,18 @@
-import { Deck, type StemName } from '../audio/Deck';
+import { Deck, type DeckId, type StemName } from '../audio/Deck';
 import { Crossfader } from '../audio/Crossfader';
+import { Waveform } from '../visualizer/Waveform';
 
-/**
- * MixerUI — multi-channel mixer with EQ, filter, stems, FX and VU.
- */
 export class MixerUI {
   private decks: Deck[];
   private crossfader: Crossfader;
   private el: HTMLElement;
   private vuMap: Map<string, { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }> = new Map();
+  private centerTrackEls = new Map<DeckId, HTMLElement>();
+  private centerMetaEls = new Map<DeckId, HTMLElement>();
+  private centerTimeEls = new Map<DeckId, HTMLElement>();
+  private channelBpmEls = new Map<DeckId, HTMLElement>();
+  private waveA: Waveform | null = null;
+  private waveB: Waveform | null = null;
 
   constructor(container: HTMLElement, decks: Deck[], crossfader: Crossfader) {
     this.decks = decks;
@@ -16,19 +20,44 @@ export class MixerUI {
     this.el = container;
     this.render();
     this.bind();
+    this.bindCenterMeta();
     this.startVU();
   }
 
   private render(): void {
     this.el.innerHTML = `
-      <div class="mixer-panel">
-        <div class="mixer-header">PRO MIXER</div>
+      <div class="center-panel">
+        <div class="center-trackline">
+          <div class="center-track center-track-a">
+            <span class="center-deck-tag">A</span>
+            <span class="center-track-name" id="center-track-A">No Track Loaded</span>
+            <span class="center-track-meta" id="center-meta-A">-- BPM / Key --</span>
+            <span class="center-track-time" id="center-time-A">0:00</span>
+          </div>
+          <div class="center-divider-text">NEURAL MIX / CROSSFADE</div>
+          <div class="center-track center-track-b">
+            <span class="center-track-time" id="center-time-B">0:00</span>
+            <span class="center-track-meta" id="center-meta-B">-- BPM / Key --</span>
+            <span class="center-track-name" id="center-track-B">No Track Loaded</span>
+            <span class="center-deck-tag">B</span>
+          </div>
+        </div>
+
+        <div class="center-wave-stack">
+          <canvas class="center-waveform" id="center-wave-A"></canvas>
+          <div class="center-wave-midline"></div>
+          <canvas class="center-waveform" id="center-wave-B"></canvas>
+        </div>
+
         <div class="mixer-channels">
           ${this.decks
             .map(
               (deck) => `
             <div class="mixer-channel" data-deck="${deck.id}">
-              <div class="channel-label">${deck.id}</div>
+              <div class="channel-head">
+                <span class="channel-label">${deck.id}</span>
+                <span class="channel-bpm" id="chan-bpm-${deck.id}">-- BPM</span>
+              </div>
 
               <div class="eq-group">
                 <div class="eq-knob-wrap"><label>HI</label><input type="range" class="eq-knob" id="eq-hi-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
@@ -48,13 +77,14 @@ export class MixerUI {
                 <div class="fx-knob-wrap"><label>RVB</label><input type="range" class="fx-knob" id="fx-reverb-${deck.id}" min="0" max="100" value="0"></div>
                 <div class="fx-knob-wrap"><label>FX FLT</label><input type="range" class="fx-knob" id="fx-filter-${deck.id}" min="0" max="100" value="0"></div>
               </div>
+
               <div class="neural-fx-row">
                 <button class="btn btn-neural-fx" id="nfx-vocal-echo-${deck.id}">VOCAL ECHO</button>
                 <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
               </div>
 
               <div class="meter-fader-stack">
-                <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="120"></canvas>
+                <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="92"></canvas>
                 <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical">
               </div>
             </div>
@@ -75,6 +105,27 @@ export class MixerUI {
       const canvas = this.el.querySelector(`#vu-${deck.id}`) as HTMLCanvasElement;
       const ctx = canvas.getContext('2d')!;
       this.vuMap.set(deck.id, { canvas, ctx });
+      this.channelBpmEls.set(deck.id, this.el.querySelector(`#chan-bpm-${deck.id}`) as HTMLElement);
+    });
+
+    const deckA = this.decks.find((d) => d.id === 'A');
+    const deckB = this.decks.find((d) => d.id === 'B');
+    const waveCanvasA = this.el.querySelector('#center-wave-A') as HTMLCanvasElement;
+    const waveCanvasB = this.el.querySelector('#center-wave-B') as HTMLCanvasElement;
+
+    if (deckA) {
+      this.waveA = new Waveform(waveCanvasA, deckA, '#2bd4ff');
+      this.waveA.setMode('vertical');
+    }
+    if (deckB) {
+      this.waveB = new Waveform(waveCanvasB, deckB, '#ff5a99');
+      this.waveB.setMode('vertical');
+    }
+
+    (['A', 'B'] as DeckId[]).forEach((id) => {
+      this.centerTrackEls.set(id, this.el.querySelector(`#center-track-${id}`) as HTMLElement);
+      this.centerMetaEls.set(id, this.el.querySelector(`#center-meta-${id}`) as HTMLElement);
+      this.centerTimeEls.set(id, this.el.querySelector(`#center-time-${id}`) as HTMLElement);
     });
   }
 
@@ -91,6 +142,46 @@ export class MixerUI {
       this.bindStems(deck);
       this.bindNeuralFX(deck);
     });
+  }
+
+  private bindCenterMeta(): void {
+    (['A', 'B'] as DeckId[]).forEach((id) => {
+      const deck = this.decks.find((d) => d.id === id);
+      if (!deck) return;
+
+      const update = () => this.updateCenterDeckMeta(deck);
+      deck.on('loaded', update);
+      deck.on('play', update);
+      deck.on('pause', update);
+      deck.on('timeupdate', update);
+      deck.on('bpm', update);
+      deck.on('statechange', update);
+      update();
+    });
+
+    this.decks.forEach((deck) => {
+      const updateBpm = () => {
+        const bpmEl = this.channelBpmEls.get(deck.id);
+        if (!bpmEl) return;
+        bpmEl.textContent = deck.bpm > 0 ? `${deck.bpm.toFixed(1)} BPM` : '-- BPM';
+      };
+      deck.on('loaded', updateBpm);
+      deck.on('bpm', updateBpm);
+      updateBpm();
+    });
+  }
+
+  private updateCenterDeckMeta(deck: Deck): void {
+    const trackEl = this.centerTrackEls.get(deck.id);
+    const metaEl = this.centerMetaEls.get(deck.id);
+    const timeEl = this.centerTimeEls.get(deck.id);
+    if (!trackEl || !metaEl || !timeEl) return;
+
+    trackEl.textContent = deck.trackName || 'No Track Loaded';
+    const bpmText = deck.bpm > 0 ? `${deck.bpm.toFixed(1)} BPM` : '-- BPM';
+    metaEl.textContent = `${bpmText} / Key ${deck.musicalKey}`;
+    timeEl.textContent = this.formatTime(deck.currentTime);
+    trackEl.classList.toggle('playing', deck.playing);
   }
 
   private bindVolume(deck: Deck): void {
@@ -120,10 +211,10 @@ export class MixerUI {
       deck.setFilterBlend(parseFloat(filterSlider.value) / 100);
     });
 
-    [hiSlider, midSlider, loSlider, filterSlider].forEach((s) => {
-      s.addEventListener('dblclick', () => {
-        s.value = '0';
-        s.dispatchEvent(new Event('input'));
+    [hiSlider, midSlider, loSlider, filterSlider].forEach((slider) => {
+      slider.addEventListener('dblclick', () => {
+        slider.value = '0';
+        slider.dispatchEvent(new Event('input'));
       });
     });
   }
@@ -202,8 +293,9 @@ export class MixerUI {
 
     const draw = () => {
       this.decks.forEach((deck) => {
-        const buf = buffers.get(deck.id)!;
-        const entry = this.vuMap.get(deck.id)!;
+        const buf = buffers.get(deck.id);
+        const entry = this.vuMap.get(deck.id);
+        if (!buf || !entry) return;
         deck.analyser.getByteFrequencyData(buf);
         this.drawVU(entry.ctx, buf);
       });
@@ -214,7 +306,7 @@ export class MixerUI {
 
   private drawVU(ctx: CanvasRenderingContext2D, data: Uint8Array<ArrayBuffer>): void {
     const w = 24;
-    const h = 120;
+    const h = 92;
     ctx.clearRect(0, 0, w, h);
 
     let sum = 0;
@@ -224,20 +316,26 @@ export class MixerUI {
 
     const barH = level * h;
     const gradient = ctx.createLinearGradient(0, h, 0, 0);
-    gradient.addColorStop(0, '#21d4fd');
-    gradient.addColorStop(0.65, '#b721ff');
-    gradient.addColorStop(0.9, '#ffd166');
-    gradient.addColorStop(1, '#ff4d6d');
+    gradient.addColorStop(0, '#1a9dc8');
+    gradient.addColorStop(0.7, '#8ee7ff');
+    gradient.addColorStop(1, '#d9fbff');
 
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
     ctx.fillRect(0, 0, w, h);
 
     ctx.fillStyle = gradient;
     ctx.fillRect(2, h - barH, w - 4, barH);
 
-    ctx.fillStyle = 'rgba(6, 10, 26, 0.6)';
+    ctx.fillStyle = 'rgba(6, 10, 24, 0.6)';
     for (let y = 0; y < h; y += 5) {
       ctx.fillRect(0, y, w, 1);
     }
+  }
+
+  private formatTime(seconds: number): string {
+    if (!isFinite(seconds) || seconds < 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
   }
 }

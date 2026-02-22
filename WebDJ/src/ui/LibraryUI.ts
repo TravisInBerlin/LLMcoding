@@ -6,17 +6,16 @@ interface TrackItem {
   name: string;
   size: string;
   bpm: number;
+  hue: number;
 }
 
-/**
- * LibraryUI — file library with deck loading and lightweight match suggestions.
- */
 export class LibraryUI {
   private decks: Deck[];
   private el: HTMLElement;
   private tracks: TrackItem[] = [];
   private trackListEl!: HTMLElement;
   private matchEl!: HTMLElement;
+  private dropZoneEl!: HTMLElement;
 
   constructor(container: HTMLElement, decks: Deck[]) {
     this.decks = decks;
@@ -29,7 +28,10 @@ export class LibraryUI {
     this.el.innerHTML = `
       <div class="library-panel">
         <div class="library-header">
-          <span class="library-title">LIBRARY + MATCH</span>
+          <div class="library-left">
+            <span class="library-title">LIBRARY + MATCH</span>
+            <span class="library-match" id="library-match">Match: load tracks to get suggestions.</span>
+          </div>
           <div class="library-actions">
             <input type="text" class="search-input" id="search-input" placeholder="Search tracks...">
             <label class="btn btn-add-files" for="file-picker">+ Add Files</label>
@@ -37,39 +39,38 @@ export class LibraryUI {
           </div>
         </div>
 
-        <div class="library-match" id="library-match">Match: load tracks to get suggestions.</div>
-
         <div class="drop-zone" id="drop-zone">
           <div class="drop-zone-inner">
-            <span class="drop-icon">Drop audio files</span>
+            <span class="drop-copy">Drop audio files here</span>
+            <span class="drop-subcopy">Supports iPad Files / local storage / drag & drop</span>
           </div>
         </div>
 
-        <div class="track-list" id="track-list"></div>
+        <div class="track-grid" id="track-list"></div>
       </div>
     `;
 
     this.trackListEl = this.el.querySelector('#track-list')!;
     this.matchEl = this.el.querySelector('#library-match')!;
+    this.dropZoneEl = this.el.querySelector('#drop-zone')!;
   }
 
   private bind(): void {
-    const dropZone = this.el.querySelector('#drop-zone')!;
     const filePicker = this.el.querySelector('#file-picker') as HTMLInputElement;
     const searchInput = this.el.querySelector('#search-input') as HTMLInputElement;
 
-    dropZone.addEventListener('dragover', (e) => {
+    this.dropZoneEl.addEventListener('dragover', (e) => {
       e.preventDefault();
-      dropZone.classList.add('drag-over');
+      this.dropZoneEl.classList.add('drag-over');
     });
 
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.classList.remove('drag-over');
+    this.dropZoneEl.addEventListener('dragleave', () => {
+      this.dropZoneEl.classList.remove('drag-over');
     });
 
-    dropZone.addEventListener('drop', (e) => {
+    this.dropZoneEl.addEventListener('drop', (e) => {
       e.preventDefault();
-      dropZone.classList.remove('drag-over');
+      this.dropZoneEl.classList.remove('drag-over');
       const dt = (e as DragEvent).dataTransfer;
       if (dt?.files) void this.addFiles(dt.files);
     });
@@ -95,19 +96,19 @@ export class LibraryUI {
       const file = fileList[i];
       if (!file.type.startsWith('audio/')) continue;
       const bpm = await this.estimateBpm(file);
+      const hue = (this.tracks.length * 47 + file.name.length * 13) % 360;
       this.tracks.push({
         file,
         name: file.name.replace(/\.[^/.]+$/, ''),
         size: this.formatSize(file.size),
         bpm,
+        hue,
       });
     }
 
     this.renderTracks();
     this.renderMatchSuggestions();
-
-    const dropZone = this.el.querySelector('#drop-zone') as HTMLElement;
-    if (this.tracks.length > 0) dropZone.style.display = 'none';
+    this.dropZoneEl.classList.toggle('hidden', this.tracks.length > 0);
   }
 
   private async estimateBpm(file: File): Promise<number> {
@@ -124,25 +125,32 @@ export class LibraryUI {
   }
 
   private renderTracks(filter = ''): void {
-    const filtered = this.tracks.filter((t) => t.name.toLowerCase().includes(filter));
+    const filtered = this.tracks.filter((track) => track.name.toLowerCase().includes(filter));
 
     this.trackListEl.innerHTML = filtered
-      .map(
-        (track, i) => `
-      <div class="track-row" data-index="${this.tracks.indexOf(track)}">
-        <span class="track-number">${i + 1}</span>
-        <span class="track-name">${track.name}</span>
-        <span class="track-meta">${track.bpm.toFixed(1)} BPM</span>
-        <span class="track-size">${track.size}</span>
-        ${this.decks
-          .map(
-            (deck) =>
-              `<button class="btn btn-load-${deck.id.toLowerCase()}" data-deck="${deck.id}" data-index="${this.tracks.indexOf(track)}">${deck.id}</button>`,
-          )
-          .join('')}
-      </div>
-    `,
-      )
+      .map((track) => {
+        const idx = this.tracks.indexOf(track);
+        const title = this.escapeHtml(track.name);
+        return `
+          <div class="track-card" data-index="${idx}">
+            <div class="track-art" style="--track-hue:${track.hue}">
+              <span class="track-art-letter">${title.charAt(0) || '♪'}</span>
+            </div>
+            <div class="track-info">
+              <div class="track-name" title="${title}">${title}</div>
+              <div class="track-meta">${track.bpm.toFixed(1)} BPM • ${track.size}</div>
+            </div>
+            <div class="track-load-row">
+              ${this.decks
+                .map(
+                  (deck) =>
+                    `<button class="btn btn-load-${deck.id.toLowerCase()}" data-deck="${deck.id}" data-index="${idx}">${deck.id}</button>`,
+                )
+                .join('')}
+            </div>
+          </div>
+        `;
+      })
       .join('');
 
     this.trackListEl.querySelectorAll('[data-deck]').forEach((btn) => {
@@ -160,7 +168,7 @@ export class LibraryUI {
   private renderMatchSuggestions(): void {
     const activeDeck = this.decks.find((d) => d.playing) || this.decks.find((d) => d.bpm > 0);
     if (!activeDeck || this.tracks.length === 0 || activeDeck.bpm <= 0) {
-      this.matchEl.textContent = 'Match: play/load a deck to see AI-style suggestions.';
+      this.matchEl.textContent = 'Match: play or load a deck to see harmonic suggestions.';
       return;
     }
 
@@ -173,7 +181,16 @@ export class LibraryUI {
       .slice(0, 3)
       .map((m) => `${m.track.name} (${m.track.bpm.toFixed(1)} BPM)`);
 
-    this.matchEl.textContent = `Match for Deck ${activeDeck.id} (${activeDeck.bpm.toFixed(1)} BPM): ${matches.join(' | ')}`;
+    this.matchEl.textContent = `Match for Deck ${activeDeck.id} (${activeDeck.bpm.toFixed(1)} BPM): ${matches.join(' / ')}`;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private formatSize(bytes: number): string {

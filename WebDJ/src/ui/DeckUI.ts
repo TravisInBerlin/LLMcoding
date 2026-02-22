@@ -1,9 +1,6 @@
 import { Deck } from '../audio/Deck';
 import { Waveform, type WaveformMode } from '../visualizer/Waveform';
 
-/**
- * DeckUI — renders a deck panel with transport, waveform, cues, and advanced controls.
- */
 export class DeckUI {
   private deck: Deck;
   private el: HTMLElement;
@@ -40,25 +37,30 @@ export class DeckUI {
   private render(): void {
     const side = this.deck.id;
     this.el.innerHTML = `
-      <div class="deck-panel deck-${side.toLowerCase()}">
-        <div class="deck-header">
-          <span class="deck-label" style="color:${this.accentColor}">DECK ${side}</span>
-          <span class="deck-track-name" id="track-${side}">No Track Loaded</span>
+      <div class="deck-surface deck-${side.toLowerCase()}">
+        <div class="deck-topbar">
+          <div class="deck-identity">
+            <span class="deck-label" style="color:${this.accentColor}">DECK ${side}</span>
+            <span class="deck-track-name" id="track-${side}">No Track Loaded</span>
+          </div>
           <button class="btn btn-mini" id="key-lock-${side}">KEY LOCK</button>
         </div>
-        <canvas class="waveform-canvas" id="waveform-${side}"></canvas>
-        <div class="deck-info-row">
-          <span class="deck-time" id="time-${side}">0:00 / 0:00</span>
-          <span class="deck-bpm" id="bpm-${side}">-- BPM</span>
-          <span class="deck-key" id="key-${side}">Key: --</span>
-          <span class="deck-stem-mode" id="stem-mode-${side}">Neural: --</span>
-        </div>
-        <div class="deck-neural-progress">
-          <div class="deck-neural-progress-bar" id="stem-progress-${side}"></div>
+
+        <div class="deck-wave-strip-wrap">
+          <canvas class="waveform-canvas deck-wave-strip" id="waveform-${side}"></canvas>
+          <div class="deck-info-row">
+            <span class="deck-time" id="time-${side}">0:00 / 0:00</span>
+            <span class="deck-bpm" id="bpm-${side}">-- BPM</span>
+            <span class="deck-key" id="key-${side}">Key: --</span>
+            <span class="deck-stem-mode" id="stem-mode-${side}">Neural: --</span>
+          </div>
+          <div class="deck-neural-progress">
+            <div class="deck-neural-progress-bar" id="stem-progress-${side}"></div>
+          </div>
         </div>
 
-        <div class="deck-controls">
-          <div class="jog-container">
+        <div class="deck-performance">
+          <div class="jog-zone">
             <div class="jog-wheel" id="jog-${side}">
               <div class="jog-dot"></div>
               <div class="jog-label">${side}</div>
@@ -66,37 +68,37 @@ export class DeckUI {
             <div class="platter-label">DISC</div>
           </div>
 
-          <div class="transport-controls performance-layout">
-            <div class="transport-row transport-strip">
-              <button class="btn btn-cue" id="cue-btn-${side}" title="Return to start cue">CUE</button>
+          <div class="deck-action-grid">
+            <div class="transport-row">
+              <button class="btn btn-cue" id="cue-btn-${side}" title="Return to cue">CUE</button>
               <button class="btn btn-play" id="play-btn-${side}" title="Play/Pause">▶</button>
-              <button class="btn btn-mini" id="sync-btn-${side}" title="Sync tempo to opposite deck">SYNC</button>
-              <button class="btn btn-mini" id="key-match-${side}" title="Match harmonic key">KEY MATCH</button>
+              <button class="btn btn-mini" id="sync-btn-${side}" title="Sync tempo">SYNC</button>
+              <button class="btn btn-mini" id="key-match-${side}" title="Match key">KEY MATCH</button>
             </div>
 
             <div class="loop-controls">
-              <button class="btn btn-loop" id="loop-in-${side}" title="Set loop start">IN</button>
-              <button class="btn btn-loop" id="loop-out-${side}" title="Set loop end">OUT</button>
-              <button class="btn btn-loop-toggle" id="loop-toggle-${side}" title="Enable/disable loop">LOOP</button>
-              <button class="btn btn-loop" id="loop-save-${side}" title="Save current loop">SAVE</button>
+              <button class="btn btn-loop" id="loop-in-${side}" title="Set loop in">IN</button>
+              <button class="btn btn-loop" id="loop-out-${side}" title="Set loop out">OUT</button>
+              <button class="btn btn-loop-toggle" id="loop-toggle-${side}" title="Toggle loop">LOOP</button>
+              <button class="btn btn-loop" id="loop-save-${side}" title="Save loop">SAVE</button>
             </div>
 
             <div class="auto-loop-row">
-              ${[1, 2, 4, 8, 16].map((b) => `<button class="btn btn-auto-loop" id="loop-${side}-${b}" title="Create ${b} beat auto-loop">${b}B</button>`).join('')}
+              ${[1, 2, 4, 8, 16].map((b) => `<button class="btn btn-auto-loop" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`).join('')}
             </div>
 
-            <div class="pad-section">
-              <div class="cue-points cue-grid" id="cue-grid-${side}">
-                ${Array.from({ length: 16 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1} (Shift+Click to set)">${i + 1}</button>`).join('')}
-              </div>
+            <div class="cue-points cue-grid" id="cue-grid-${side}">
+              ${Array.from({ length: 16 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1} (Shift+Click to set)">${i + 1}</button>`).join('')}
             </div>
+
+            <div class="deck-hint">Tap: jump / set, Shift+Tap: overwrite cue</div>
           </div>
 
           <div class="pitch-control">
             <label class="pitch-label" id="pitch-label-${side}">+0.0%</label>
-            <input type="range" class="pitch-slider" id="pitch-${side}" min="-75" max="75" value="0" orient="vertical">
+            <input type="range" class="pitch-slider" id="pitch-${side}" min="-75" max="75" value="0" orient="vertical" aria-label="Tempo">
             <label class="pitch-label" id="key-shift-label-${side}">KEY +0</label>
-            <input type="range" class="pitch-slider" id="key-shift-${side}" min="-12" max="12" value="0" orient="vertical">
+            <input type="range" class="pitch-slider" id="key-shift-${side}" min="-12" max="12" value="0" orient="vertical" aria-label="Key">
           </div>
         </div>
       </div>
@@ -149,12 +151,10 @@ export class DeckUI {
       btn.addEventListener('click', (e) => {
         if ((e as MouseEvent).shiftKey) {
           this.deck.setCuePoint(i);
+        } else if (this.deck.cuePoints.find((c) => c.id === i)) {
+          this.deck.jumpToCue(i);
         } else {
-          if (this.deck.cuePoints.find((c) => c.id === i)) {
-            this.deck.jumpToCue(i);
-          } else {
-            this.deck.setCuePoint(i);
-          }
+          this.deck.setCuePoint(i);
         }
       });
     });

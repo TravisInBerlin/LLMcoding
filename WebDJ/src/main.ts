@@ -25,9 +25,9 @@ if (isTouch) root.classList.add('touch-mode');
 if (isIPad) root.classList.add('ipad-mode');
 root.innerHTML = `
   <header class="app-header">
-    <div class="logo">
+    <div class="logo-block">
       <span class="logo-text">WebDJ NEXUS</span>
-      <span class="header-badge" id="status-badge">iPad-ready / Pro Mix</span>
+      <span class="header-badge" id="status-badge">djay-style / iPad Performance</span>
     </div>
     <div class="header-actions">
       <button class="btn btn-mini" id="midi-btn">MIDI CONNECT</button>
@@ -57,41 +57,43 @@ root.innerHTML = `
       <button class="btn btn-mini" id="midi-learn-btn">MIDI LEARN</button>
       <button class="btn btn-mini" id="midi-learn-cancel-btn">LEARN CANCEL</button>
       <button class="btn btn-mini" id="mixer-toggle-btn">MIXER HIDE</button>
-      <button class="btn btn-mini" id="guide-toggle-btn">GUIDE</button>
       <button class="btn btn-mini" id="deck-mode-btn">4 DECK</button>
       <button class="btn btn-mini" id="waveform-mode-btn">WAVE: H</button>
+      <button class="btn btn-mini" id="guide-toggle-btn">GUIDE</button>
       <button class="btn btn-mini" id="automix-btn">AUTOMIX OFF</button>
       <button class="btn btn-mini" id="record-btn">REC START</button>
     </div>
   </header>
 
-  <section class="quickstart" id="quickstart">
-    <div class="quickstart-title">Quick Start</div>
-    <div class="quickstart-steps">
-      <span>1) Add Filesから曲を読み込み</span>
-      <span>2) A/Bにロードして再生</span>
-      <span>3) SYNC → クロスフェーダーでミックス</span>
-      <span>4) MIDIは CONNECT → LEARN → キャンセル可</span>
-    </div>
-    <button class="btn btn-mini" id="quickstart-close">HIDE GUIDE</button>
+  <section class="guide-panel" id="guide-panel">
+    <span><strong>1.</strong> Add Files でライブラリに曲を追加</span>
+    <span><strong>2.</strong> A/B ボタンでデッキにロード</span>
+    <span><strong>3.</strong> PLAY + SYNC で再生開始</span>
+    <span><strong>4.</strong> 中央クロスフェーダーでミックス</span>
+    <span><strong>5.</strong> MIDI LEARN は ESC または LEARN CANCEL で中断</span>
   </section>
 
-  <main class="dj-layout">
-    <section class="deck-container deck-slot-a" id="deck-a-container"></section>
-    <section class="mixer-container mixer-slot" id="mixer-container"></section>
-    <section class="deck-container deck-slot-b" id="deck-b-container"></section>
-    <section class="deck-container deck-slot-c" id="deck-c-container"></section>
-    <section class="deck-container deck-slot-d" id="deck-d-container"></section>
+  <main class="dj-stage">
+    <section class="stage-row primary-row">
+      <section class="deck-container deck-slot-a" id="deck-a-container"></section>
+      <section class="center-container mixer-slot" id="mixer-container"></section>
+      <section class="deck-container deck-slot-b" id="deck-b-container"></section>
+    </section>
+
+    <section class="stage-row aux-row" id="aux-row">
+      <section class="deck-container deck-slot-c" id="deck-c-container"></section>
+      <section class="deck-container deck-slot-d" id="deck-d-container"></section>
+    </section>
   </main>
 
   <section class="library-container" id="library-container"></section>
 `;
 
 const accentMap: Record<DeckId, string> = {
-  A: '#00d1ff',
-  B: '#ff4f8b',
-  C: '#70e000',
-  D: '#f9c74f',
+  A: '#20c9ff',
+  B: '#ff4e92',
+  C: '#76df38',
+  D: '#ffc659',
 };
 
 const deckUIs = new Map<DeckId, DeckUI>();
@@ -118,8 +120,7 @@ const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSele
 const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
 const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButtonElement;
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
-const quickStartEl = document.getElementById('quickstart') as HTMLElement;
-const quickStartCloseBtn = document.getElementById('quickstart-close') as HTMLButtonElement;
+const guidePanel = document.getElementById('guide-panel') as HTMLElement;
 midiLearnCancelBtn.disabled = true;
 
 const applyDeckMode = (): void => {
@@ -143,17 +144,17 @@ applyWaveformMode();
 applyMixerVisibility();
 
 if (isIPad) {
-  statusBadge.textContent = 'iPad Touch / Low Latency';
+  statusBadge.textContent = 'iPad touch / low latency';
 }
 
-if (localStorage.getItem('webdj.quickstart.hidden') === '1') {
-  quickStartEl.classList.remove('active');
+if (localStorage.getItem('webdj.guide.hidden') === '1') {
+  guidePanel.classList.remove('active');
+  guideToggleBtn.classList.remove('active');
 } else {
-  quickStartEl.classList.add('active');
+  guidePanel.classList.add('active');
+  guideToggleBtn.classList.add('active');
 }
-guideToggleBtn.classList.toggle('active', quickStartEl.classList.contains('active'));
 
-// Sync requests
 window.addEventListener(
   'sync-request',
   ((e: CustomEvent) => {
@@ -169,7 +170,6 @@ window.addEventListener(
   }) as EventListener,
 );
 
-// Key match requests
 window.addEventListener(
   'keymatch-request',
   ((e: CustomEvent) => {
@@ -207,31 +207,25 @@ function applyCrossfaderFusion(pos: number): void {
   const deckB = deckMap.get('B')!;
   const clamped = Math.max(0, Math.min(1, pos));
 
-  // A side: keep rhythm longer, pull vocal earlier.
   deckA.setStemLevel('drums', 1 - Math.max(0, clamped - 0.65) * 2.2);
   deckA.setStemLevel('instruments', 1 - Math.max(0, clamped - 0.45) * 2.0);
   deckA.setStemLevel('vocals', 1 - Math.max(0, clamped - 0.28) * 2.3);
 
-  // B side: introduce drums first, vocals last for cleaner blend.
   deckB.setStemLevel('drums', Math.min(1, clamped * 1.9));
   deckB.setStemLevel('instruments', Math.min(1, Math.max(0, clamped - 0.18) * 1.7));
   deckB.setStemLevel('vocals', Math.min(1, Math.max(0, clamped - 0.38) * 1.8));
 }
-
-// Deck mode toggle
 
 deckModeBtn.addEventListener('click', () => {
   deckMode = deckMode === 2 ? 4 : 2;
   applyDeckMode();
 });
 
-// Waveform mode toggle
 waveformModeBtn.addEventListener('click', () => {
   waveformMode = waveformMode === 'horizontal' ? 'vertical' : 'horizontal';
   applyWaveformMode();
 });
 
-// Automix (A/B)
 let automixEnabled = false;
 let automixTimer: number | null = null;
 
@@ -378,21 +372,15 @@ mixerToggleBtn.addEventListener('click', () => {
   applyMixerVisibility();
 });
 
-quickStartCloseBtn.addEventListener('click', () => {
-  quickStartEl.classList.remove('active');
-  localStorage.setItem('webdj.quickstart.hidden', '1');
-  guideToggleBtn.classList.remove('active');
-});
-
 guideToggleBtn.addEventListener('click', () => {
-  const visible = quickStartEl.classList.contains('active');
+  const visible = guidePanel.classList.contains('active');
   if (visible) {
-    quickStartEl.classList.remove('active');
-    localStorage.setItem('webdj.quickstart.hidden', '1');
+    guidePanel.classList.remove('active');
+    localStorage.setItem('webdj.guide.hidden', '1');
     guideToggleBtn.classList.remove('active');
   } else {
-    quickStartEl.classList.add('active');
-    localStorage.removeItem('webdj.quickstart.hidden');
+    guidePanel.classList.add('active');
+    localStorage.removeItem('webdj.guide.hidden');
     guideToggleBtn.classList.add('active');
   }
 });
@@ -405,7 +393,6 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// Recording
 let recorder: MediaRecorder | null = null;
 let recordChunks: Blob[] = [];
 
@@ -441,6 +428,5 @@ recordBtn.addEventListener('click', async () => {
   recordBtn.classList.remove('recording');
 });
 
-// Resume audio context on first interaction
 document.addEventListener('click', () => engine.resume(), { once: true });
 document.addEventListener('touchstart', () => engine.resume(), { once: true, passive: true });
