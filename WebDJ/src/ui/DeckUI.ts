@@ -6,7 +6,9 @@ export class DeckUI {
   private el: HTMLElement;
   private waveform!: Waveform;
   private jogAngle = 0;
+  private deckSurfaceEl!: HTMLElement;
   private jogEl!: HTMLElement;
+  private tonearmEl!: HTMLElement;
   private vinylTextEl!: HTMLElement;
   private timeEl!: HTMLElement;
   private bpmEl!: HTMLElement;
@@ -40,7 +42,7 @@ export class DeckUI {
   private render(): void {
     const side = this.deck.id;
     this.el.innerHTML = `
-      <div class="deck-surface deck-${side.toLowerCase()}">
+      <div class="deck-surface deck-${side.toLowerCase()}" style="--deck-accent:${this.accentColor};">
         <div class="deck-strip">
           <div class="deck-strip-art">${side}</div>
           <div class="deck-strip-main">
@@ -66,13 +68,23 @@ export class DeckUI {
 
         <div class="deck-main">
           <div class="jog-zone">
-            <div class="jog-wheel" id="jog-${side}">
-              <div class="vinyl-grooves"></div>
-              <div class="vinyl-center">
-                <div class="vinyl-spindle"></div>
-                <div class="vinyl-text" id="vinyl-text-${side}">${side}</div>
+            <div class="turntable-shell">
+              <div class="platter-rim"></div>
+              <div class="jog-wheel" id="jog-${side}">
+                <div class="vinyl-grooves"></div>
+                <div class="vinyl-center">
+                  <div class="vinyl-spindle"></div>
+                  <div class="vinyl-text" id="vinyl-text-${side}">${side}</div>
+                </div>
+                <div class="vinyl-highlight"></div>
               </div>
-              <div class="vinyl-highlight"></div>
+              <div class="tonearm" id="tonearm-${side}">
+                <div class="tonearm-base"></div>
+                <div class="tonearm-knob"></div>
+                <div class="tonearm-arm"></div>
+                <div class="tonearm-head"></div>
+                <div class="tonearm-needle"></div>
+              </div>
             </div>
             <div class="platter-label">DISC</div>
           </div>
@@ -118,7 +130,9 @@ export class DeckUI {
     const canvas = this.el.querySelector(`#waveform-${side}`) as HTMLCanvasElement;
     this.waveform = new Waveform(canvas, this.deck, this.accentColor);
 
+    this.deckSurfaceEl = this.el.querySelector('.deck-surface') as HTMLElement;
     this.jogEl = this.el.querySelector(`#jog-${side}`)!;
+    this.tonearmEl = this.el.querySelector(`#tonearm-${side}`)!;
     this.vinylTextEl = this.el.querySelector(`#vinyl-text-${side}`)!;
     this.timeEl = this.el.querySelector(`#time-${side}`)!;
     this.bpmEl = this.el.querySelector(`#bpm-${side}`)!;
@@ -231,11 +245,13 @@ export class DeckUI {
     this.deck.on('play', () => {
       this.playBtn.textContent = '⏸';
       this.playBtn.classList.add('playing');
+      this.tonearmEl.classList.add('playing');
     });
 
     this.deck.on('pause', () => {
       this.playBtn.textContent = '▶';
       this.playBtn.classList.remove('playing');
+      this.tonearmEl.classList.remove('playing');
     });
 
     this.deck.on('timeupdate', () => {
@@ -305,9 +321,13 @@ export class DeckUI {
       hash = (hash * 31 + seed.charCodeAt(i)) & 0xffff;
     }
     const hue = Math.abs(hash) % 360;
+    const hue2 = (hue + 46) % 360;
     this.jogEl.style.setProperty('--vinyl-hue', `${hue}`);
+    this.jogEl.style.setProperty('--vinyl-hue2', `${hue2}`);
     this.jogEl.classList.toggle('loaded', Boolean(title));
+    this.tonearmEl.classList.toggle('loaded', Boolean(title));
     this.vinylTextEl.textContent = title ? title.slice(0, 2).toUpperCase() : this.deck.id;
+    this.deckSurfaceEl.style.setProperty('--deck-accent-secondary', `hsl(${hue2} 82% 62%)`);
   }
 
   private setupJogWheel(): void {
