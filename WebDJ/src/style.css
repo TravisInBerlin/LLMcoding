@@ -42,7 +42,7 @@ body {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-rows: auto auto 1fr minmax(170px, 230px);
+  grid-template-rows: auto auto 1fr minmax(130px, 190px);
   gap: 10px;
   padding: 10px;
   padding-top: calc(10px + env(safe-area-inset-top, 0px));
@@ -60,8 +60,8 @@ body {
 }
 
 .app-header {
-  min-height: 58px;
-  padding: 10px 16px;
+  min-height: 52px;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -76,7 +76,7 @@ body {
 
 .logo-text {
   font-family: 'Orbitron', sans-serif;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 900;
   letter-spacing: 1.2px;
   color: #f4f8ff;
@@ -84,7 +84,7 @@ body {
 }
 
 .header-badge {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-dim);
 }
 
@@ -134,7 +134,7 @@ body {
 .dj-layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 300px 1fr;
+  grid-template-columns: 1fr 280px 1fr;
   grid-template-rows: 1fr;
   gap: 10px;
 }
@@ -228,7 +228,7 @@ body {
 .deck-panel {
   height: 100%;
   min-height: 0;
-  padding: 10px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -274,7 +274,7 @@ body {
 
 .waveform-canvas {
   width: 100%;
-  height: 100px;
+  height: 124px;
   border-radius: var(--r-md);
   border: 1px solid var(--line);
   cursor: pointer;
@@ -318,7 +318,7 @@ body {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: 98px 1fr 44px;
+  grid-template-columns: 112px 1fr 44px;
   gap: 8px;
   overflow: hidden;
 }
@@ -332,8 +332,8 @@ body {
 }
 
 .jog-wheel {
-  width: 96px;
-  height: 96px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   border: 1px solid var(--line-strong);
   background: radial-gradient(circle at 30% 20%, rgba(138, 167, 245, 0.6), rgba(9, 14, 30, 0.93));
@@ -343,7 +343,7 @@ body {
 }
 
 .platter-label {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.7px;
   color: rgba(210, 226, 255, 0.78);
 }
@@ -376,55 +376,34 @@ body {
   min-width: 0;
   display: grid;
   grid-template-rows: auto auto auto 1fr auto;
-  gap: 5px;
+  gap: 6px;
   min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
+  overflow: hidden;
+  padding-right: 0;
 }
 
 .transport-row,
 .loop-controls,
 .auto-loop-row {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.control-section {
-  border: 1px solid rgba(162, 184, 240, 0.2);
-  border-radius: 8px;
-  padding: 4px 5px;
-  background: rgba(4, 10, 24, 0.38);
-}
-
-.section-title {
-  font-size: 9px;
-  letter-spacing: 0.5px;
-  color: rgba(202, 219, 255, 0.68);
-  margin-bottom: 3px;
-}
-
 .transport-strip .btn {
-  min-width: 58px;
+  min-width: 62px;
 }
 
 .cue-grid {
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .pad-section {
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-}
-
-.pad-help {
-  margin-top: 3px;
-  font-size: 9px;
-  color: rgba(192, 210, 252, 0.55);
+  overflow: hidden;
 }
 
 .pitch-control {
@@ -432,7 +411,7 @@ body {
   grid-template-rows: auto 1fr auto 1fr;
   align-items: center;
   justify-items: center;
-  gap: 3px;
+  gap: 8px;
 }
 
 .pitch-label {
@@ -453,7 +432,7 @@ body {
 
 .pitch-slider {
   width: 7px;
-  height: 56px;
+  height: 64px;
 }
 
 .volume-fader {
@@ -485,8 +464,8 @@ body {
   background: linear-gradient(180deg, rgba(191, 213, 255, 0.14), rgba(112, 145, 218, 0.08));
   color: var(--text);
   border-radius: var(--r-sm);
-  padding: 3px 7px;
-  font-size: 9px;
+  padding: 4px 8px;
+  font-size: 10px;
   letter-spacing: 0.3px;
   font-weight: 600;
   cursor: pointer;
@@ -525,8 +504,8 @@ body {
 
 .btn-hot-cue {
   padding: 0;
-  min-height: 18px;
-  font-size: 9px;
+  min-height: 28px;
+  font-size: 11px;
 }
 
 .btn-hot-cue.active {
@@ -547,7 +526,7 @@ body {
 .mixer-panel {
   height: 100%;
   min-height: 0;
-  padding: 8px;
+  padding: 10px;
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 8px;
@@ -580,7 +559,7 @@ body {
   background: var(--panel-2);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-height: 0;
   overflow: hidden;
 }
@@ -594,7 +573,7 @@ body {
 .fx-selector,
 .stems-group {
   display: grid;
-  gap: 2px;
+  gap: 5px;
 }
 
 .neural-fx-row {
@@ -612,15 +591,15 @@ body {
 .fx-knob-wrap,
 .stem-row {
   display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 3px;
+  grid-template-columns: 46px 1fr;
+  gap: 5px;
   align-items: center;
 }
 
 .eq-knob-wrap label,
 .fx-knob-wrap label,
 .stem-row label {
-  font-size: 8px;
+  font-size: 10px;
   color: var(--text-dim);
 }
 
@@ -631,7 +610,7 @@ body {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 5px;
+  height: 6px;
   border-radius: 3px;
   background: rgba(171, 192, 239, 0.25);
   touch-action: none;
@@ -640,15 +619,15 @@ body {
 .eq-knob::-webkit-slider-thumb,
 .fx-knob::-webkit-slider-thumb,
 .stem-slider::-webkit-slider-thumb {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #fff;
 }
 
 .vu-meter {
-  width: 18px;
-  height: 80px;
+  width: 20px;
+  height: 94px;
   border-radius: 5px;
   border: 1px solid var(--line);
 }
@@ -658,12 +637,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .volume-fader {
-  width: 10px;
-  height: 92px;
+  width: 12px;
+  height: 102px;
 }
 
 .crossfader-section {

@@ -33,8 +33,8 @@ export class MixerUI {
               <div class="eq-group">
                 <div class="eq-knob-wrap"><label>HI</label><input type="range" class="eq-knob" id="eq-hi-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
                 <div class="eq-knob-wrap"><label>MID</label><input type="range" class="eq-knob" id="eq-mid-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
-                <div class="eq-knob-wrap"><label>LO</label><input type="range" class="eq-knob" id="eq-lo-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
-                <div class="eq-knob-wrap"><label>HP/LP</label><input type="range" class="eq-knob" id="filter-${deck.id}" min="-100" max="100" value="0" step="1"></div>
+                <div class="eq-knob-wrap"><label>LOW</label><input type="range" class="eq-knob" id="eq-lo-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
+                <div class="eq-knob-wrap"><label>FILTER</label><input type="range" class="eq-knob" id="filter-${deck.id}" min="-100" max="100" value="0" step="1"></div>
               </div>
 
               <div class="stems-group">
