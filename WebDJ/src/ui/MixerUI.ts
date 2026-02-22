@@ -10,6 +10,7 @@ export class MixerUI {
   private centerMetaEls = new Map<DeckId, HTMLElement>();
   private centerTimeEls = new Map<DeckId, HTMLElement>();
   private channelBpmEls = new Map<DeckId, HTMLElement>();
+  private volumeValueEls = new Map<DeckId, HTMLElement>();
 
   constructor(container: HTMLElement, decks: Deck[], crossfader: Crossfader) {
     this.decks = decks;
@@ -80,8 +81,15 @@ export class MixerUI {
                   </div>
 
                   <div class="meter-fader-stack">
-                    <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="86"></canvas>
-                    <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical">
+                    <div class="meter-stack">
+                      <span class="meter-label">VU</span>
+                      <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="86" title="Output meter"></canvas>
+                    </div>
+                    <div class="fader-stack">
+                      <span class="meter-label">VOL</span>
+                      <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical" title="Channel volume">
+                      <span class="meter-value" id="vol-value-${deck.id}">80%</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -103,6 +111,7 @@ export class MixerUI {
       const ctx = canvas.getContext('2d')!;
       this.vuMap.set(deck.id, { canvas, ctx });
       this.channelBpmEls.set(deck.id, this.el.querySelector(`#chan-bpm-${deck.id}`) as HTMLElement);
+      this.volumeValueEls.set(deck.id, this.el.querySelector(`#vol-value-${deck.id}`) as HTMLElement);
     });
 
     (['A', 'B'] as DeckId[]).forEach((id) => {
@@ -169,10 +178,19 @@ export class MixerUI {
 
   private bindVolume(deck: Deck): void {
     const slider = this.el.querySelector(`#vol-${deck.id}`) as HTMLInputElement;
+    const valueEl = this.volumeValueEls.get(deck.id);
+    const apply = (value: number): void => {
+      const clamped = Math.max(0, Math.min(100, value));
+      deck.volume = clamped / 100;
+      if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
+    };
+
     slider.addEventListener('input', () => {
-      deck.volume = parseFloat(slider.value) / 100;
+      apply(parseFloat(slider.value));
     });
-    deck.volume = 0.8;
+
+    slider.value = '80';
+    apply(80);
   }
 
   private bindEQ(deck: Deck): void {
