@@ -77,13 +77,11 @@ root.innerHTML = `
   </section>
 
   <main class="dj-layout">
-    <section class="deck-grid" id="deck-grid">
-      <section class="deck-container" id="deck-a-container"></section>
-      <section class="deck-container" id="deck-b-container"></section>
-      <section class="deck-container" id="deck-c-container"></section>
-      <section class="deck-container" id="deck-d-container"></section>
-    </section>
-    <section class="mixer-container" id="mixer-container"></section>
+    <section class="deck-container deck-slot-a" id="deck-a-container"></section>
+    <section class="mixer-container mixer-slot" id="mixer-container"></section>
+    <section class="deck-container deck-slot-b" id="deck-b-container"></section>
+    <section class="deck-container deck-slot-c" id="deck-c-container"></section>
+    <section class="deck-container deck-slot-d" id="deck-d-container"></section>
   </main>
 
   <section class="library-container" id="library-container"></section>
@@ -350,6 +348,7 @@ const midi = new MidiController(
     midiLearnBtn.classList.toggle('active', learning);
     midiLearnCancelBtn.classList.toggle('active', learning);
     midiLearnCancelBtn.disabled = !learning;
+    midiLearnBtn.textContent = learning ? 'LEARNING...' : 'MIDI LEARN';
   },
 );
 
@@ -369,6 +368,7 @@ midiLearnBtn.addEventListener('click', async () => {
 midiLearnCancelBtn.addEventListener('click', () => {
   midi.cancelLearn();
   statusBadge.textContent = 'MIDI Learn canceled';
+  midiLearnBtn.textContent = 'MIDI LEARN';
 });
 
 mixerToggleBtn.addEventListener('click', () => {
@@ -392,6 +392,14 @@ guideToggleBtn.addEventListener('click', () => {
     quickStartEl.style.display = '';
     localStorage.removeItem('webdj.quickstart.hidden');
     guideToggleBtn.classList.add('active');
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    midi.cancelLearn();
+    statusBadge.textContent = 'MIDI Learn canceled';
+    midiLearnBtn.textContent = 'MIDI LEARN';
   }
 });
 

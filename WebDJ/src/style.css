@@ -134,12 +134,13 @@ body {
 .dj-layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 300px 1fr;
+  grid-template-rows: 1fr;
   gap: 10px;
 }
 
 .mixer-hidden .dj-layout {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr;
 }
 
@@ -147,15 +148,54 @@ body {
   display: none;
 }
 
-.deck-grid {
-  min-height: 0;
-  display: grid;
+.mixer-hidden .deck-slot-a {
+  grid-column: 1;
+}
+
+.mixer-hidden .deck-slot-b {
+  grid-column: 2;
+}
+
+.mixer-hidden.mode-4 .dj-layout {
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-rows: 1fr 1fr;
+}
+
+.mixer-hidden.mode-4 .deck-slot-c {
+  grid-column: 1;
+}
+
+.mixer-hidden.mode-4 .deck-slot-d {
+  grid-column: 2;
 }
 
 .deck-container {
   min-height: 0;
+}
+
+.deck-slot-a {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.mixer-slot {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.deck-slot-b {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.deck-slot-c {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.deck-slot-d {
+  grid-column: 3;
+  grid-row: 2;
 }
 
 .mode-2 #deck-c-container,
@@ -163,24 +203,14 @@ body {
   display: none;
 }
 
-.mode-2 .deck-grid {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr;
-}
-
 .mode-2 .mixer-channel[data-deck='C'],
 .mode-2 .mixer-channel[data-deck='D'] {
   display: none;
 }
 
-.mode-4 .deck-grid {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
-
 .mode-4 .dj-layout {
-  grid-template-columns: 1fr;
-  grid-template-rows: minmax(360px, 1fr) minmax(210px, auto);
+  grid-template-columns: 1fr 300px 1fr;
+  grid-template-rows: 1fr 1fr;
 }
 
 .mode-4 .mixer-container {
@@ -189,6 +219,10 @@ body {
 
 .mode-4 .mixer-channels {
   grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.mode-4 .mixer-slot {
+  grid-row: 1 / span 2;
 }
 
 .deck-panel {
@@ -728,13 +762,35 @@ body {
 
   .dj-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto auto;
   }
 
-  .deck-grid,
-  .mode-4 .deck-grid,
-  .mode-2 .deck-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, minmax(260px, auto));
+  .deck-slot-a,
+  .deck-slot-b,
+  .deck-slot-c,
+  .deck-slot-d,
+  .mixer-slot {
+    grid-column: 1;
+  }
+
+  .deck-slot-a {
+    grid-row: 1;
+  }
+
+  .deck-slot-b {
+    grid-row: 2;
+  }
+
+  .mixer-slot {
+    grid-row: 3;
+  }
+
+  .deck-slot-c {
+    grid-row: 4;
+  }
+
+  .deck-slot-d {
+    grid-row: 5;
   }
 
   .mode-2 #deck-c-container,
