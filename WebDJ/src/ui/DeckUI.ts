@@ -70,7 +70,10 @@ export class DeckUI {
             <div class="turntable-shell">
               <div class="platter-rim"></div>
               <div class="jog-wheel" id="jog-${side}">
-                <img src="/assets/vinyl.png" class="vinyl-record-img" alt="Vinyl Record">
+                <div class="vinyl-grooves"></div>
+                <div class="vinyl-center">
+                  <div class="vinyl-spindle"></div>
+                </div>
                 <div class="vinyl-text" id="vinyl-text-${side}">${side}</div>
                 <div class="vinyl-highlight"></div>
               </div>
