@@ -424,8 +424,9 @@ export class MixerUI {
     let dragging = false;
     let pointerId: number | null = null;
     let startY = 0;
+    let startX = 0;
     let startValue = 0;
-    const sensitivity = (max - min) / 200;
+    const sensitivity = (max - min) / 340;
 
     const apply = (raw: number): void => {
       const snapped = Math.round(raw / step) * step;
@@ -440,6 +441,7 @@ export class MixerUI {
       dragging = true;
       pointerId = e.pointerId;
       startY = e.clientY;
+      startX = e.clientX;
       startValue = get();
       el.setPointerCapture(e.pointerId);
       e.preventDefault();
@@ -447,13 +449,20 @@ export class MixerUI {
 
     el.addEventListener('pointermove', (e) => {
       if (!dragging || pointerId !== e.pointerId) return;
-      const delta = startY - e.clientY;
-      apply(startValue + delta * sensitivity);
+      const deltaY = startY - e.clientY;
+      const deltaX = e.clientX - startX;
+      const combinedDelta = deltaY + deltaX;
+      const precise = e.shiftKey ? 0.35 : 1;
+      apply(startValue + combinedDelta * sensitivity * precise);
+      e.preventDefault();
     });
 
     const stop = (e: PointerEvent) => {
       if (pointerId !== e.pointerId) return;
       dragging = false;
+      if (el.hasPointerCapture(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
       pointerId = null;
     };
     el.addEventListener('pointerup', stop);
