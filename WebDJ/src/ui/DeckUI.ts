@@ -14,6 +14,7 @@ export class DeckUI {
   private bpmEl!: HTMLElement;
   private keyEl!: HTMLElement;
   private stemModeEl!: HTMLElement;
+  private stemProgressBarEl!: HTMLElement;
   private trackEl!: HTMLElement;
   private playBtn!: HTMLButtonElement;
   private pitchSlider!: HTMLInputElement;
@@ -51,6 +52,9 @@ export class DeckUI {
           <span class="deck-bpm" id="bpm-${side}">-- BPM</span>
           <span class="deck-key" id="key-${side}">Key: --</span>
           <span class="deck-stem-mode" id="stem-mode-${side}">Neural: --</span>
+        </div>
+        <div class="deck-neural-progress">
+          <div class="deck-neural-progress-bar" id="stem-progress-${side}"></div>
         </div>
 
         <div class="deck-controls">
@@ -100,6 +104,7 @@ export class DeckUI {
     this.bpmEl = this.el.querySelector(`#bpm-${side}`)!;
     this.keyEl = this.el.querySelector(`#key-${side}`)!;
     this.stemModeEl = this.el.querySelector(`#stem-mode-${side}`)!;
+    this.stemProgressBarEl = this.el.querySelector(`#stem-progress-${side}`)!;
     this.trackEl = this.el.querySelector(`#track-${side}`)!;
     this.playBtn = this.el.querySelector(`#play-btn-${side}`)!;
     this.pitchSlider = this.el.querySelector(`#pitch-${side}`)!;
@@ -228,7 +233,13 @@ export class DeckUI {
   private updateMeta(): void {
     this.bpmEl.textContent = this.deck.bpm > 0 ? `${this.deck.bpm.toFixed(1)} BPM` : '-- BPM';
     this.keyEl.textContent = `Key: ${this.deck.musicalKey}`;
-    this.stemModeEl.textContent = `Neural: ${this.deck.stemMode}`;
+    if (this.deck.stemMode === 'analyzing') {
+      const p = Math.round(this.deck.separationProgress * 100);
+      this.stemModeEl.textContent = `Neural: analyzing ${p}%`;
+    } else {
+      this.stemModeEl.textContent = `Neural: ${this.deck.stemMode}`;
+    }
+    this.stemProgressBarEl.style.width = `${Math.round(this.deck.separationProgress * 100)}%`;
   }
 
   private syncCueState(): void {

@@ -200,6 +200,22 @@ body {
   color: #9ef0ff;
 }
 
+.deck-neural-progress {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(158, 240, 255, 0.18);
+  overflow: hidden;
+}
+
+.deck-neural-progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7ef2ff, #f9c74f);
+  transition: width 120ms linear;
+}
+
 .deck-controls {
   min-height: 0;
   flex: 1;

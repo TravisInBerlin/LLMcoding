@@ -34,6 +34,10 @@ type DeckListener = (deck: Deck) => void;
  * Deck — per-deck audio graph with playback, EQ, loops, cues, and neural stems.
  */
 export class Deck {
+  private static separationCache = new Map<string, { stems: Record<StemName, AudioBuffer>; mode: SeparationMode }>();
+  private static cacheOrder: string[] = [];
+  private static readonly maxCacheEntries = 8;
+
   readonly id: DeckId;
   private engine: AudioEngine;
   private separator: NeuralSeparator;
@@ -91,6 +95,7 @@ export class Deck {
   duration = 0;
   musicalKey = 'Unknown';
   stemMode: SeparationMode | 'analyzing' | 'none' = 'none';
+  separationProgress = 0;
 
   // loops & cues
   loopIn = -1;
@@ -307,14 +312,38 @@ export class Deck {
     this._keyLock = false;
 
     this.stemMode = 'analyzing';
+    this.separationProgress = 0;
     this.emit('bpm');
     this.emit('loaded');
     this.emit('statechange');
 
+    const cacheKey = `${file.name}:${file.size}:${file.lastModified}`;
+    const cached = Deck.separationCache.get(cacheKey);
+    if (cached) {
+      this.stemBuffers = cached.stems;
+      this.stemMode = cached.mode;
+      this.separationProgress = 1;
+      this.emit('statechange');
+      return;
+    }
+
     // Run AI separation after decode.
-    const result = await this.separator.separate(this.buffer);
+    const result = await this.separator.separate(this.buffer, {
+      onProgress: (value) => {
+        this.separationProgress = Math.max(0, Math.min(1, value));
+        this.emit('statechange');
+      },
+    });
     this.stemBuffers = result.stems;
     this.stemMode = result.mode;
+    this.separationProgress = 1;
+    Deck.separationCache.set(cacheKey, { stems: result.stems, mode: result.mode });
+    Deck.cacheOrder = Deck.cacheOrder.filter((k) => k !== cacheKey);
+    Deck.cacheOrder.push(cacheKey);
+    while (Deck.cacheOrder.length > Deck.maxCacheEntries) {
+      const oldest = Deck.cacheOrder.shift();
+      if (oldest) Deck.separationCache.delete(oldest);
+    }
     if (this._playing) {
       const pos = this.currentTime;
       this.pause();

@@ -8,6 +8,10 @@ export interface SeparationResult {
   mode: SeparationMode;
 }
 
+interface SeparationOptions {
+  onProgress?: (value: number) => void;
+}
+
 interface NeuralModelConfig {
   inputName?: string;
   outputNames?: {
@@ -37,12 +41,14 @@ export class NeuralSeparator {
     this.ctx = ctx;
   }
 
-  async separate(buffer: AudioBuffer): Promise<SeparationResult> {
+  async separate(buffer: AudioBuffer, options: SeparationOptions = {}): Promise<SeparationResult> {
+    options.onProgress?.(0.01);
     const ready = await this.ensureSession();
 
     if (ready && this.session) {
       try {
-        const stems = await this.runOnnxChunked(buffer);
+        const stems = await this.runOnnxChunked(buffer, options.onProgress);
+        options.onProgress?.(1);
         return {
           stems,
           mode: this.mode,
@@ -52,7 +58,8 @@ export class NeuralSeparator {
       }
     }
 
-    const stems = await this.runHybridSeparation(buffer);
+    const stems = await this.runHybridSeparation(buffer, options.onProgress);
+    options.onProgress?.(1);
     return {
       stems,
       mode: 'hybrid',
@@ -108,7 +115,10 @@ export class NeuralSeparator {
     }
   }
 
-  private async runOnnxChunked(buffer: AudioBuffer): Promise<Record<StemName, AudioBuffer>> {
+  private async runOnnxChunked(
+    buffer: AudioBuffer,
+    onProgress?: (value: number) => void,
+  ): Promise<Record<StemName, AudioBuffer>> {
     if (!this.session) throw new Error('ONNX session unavailable');
 
     const mono = this.toMono(buffer);
@@ -122,6 +132,8 @@ export class NeuralSeparator {
     const vocalsAcc = new Float32Array(mono.length);
     const weightAcc = new Float32Array(mono.length);
 
+    const totalChunks = Math.max(1, Math.ceil(mono.length / hop));
+    let chunkIndex = 0;
     for (let start = 0; start < mono.length; start += hop) {
       const frame = new Float32Array(frameSize);
       const frameLen = Math.min(frameSize, mono.length - start);
@@ -142,6 +154,8 @@ export class NeuralSeparator {
       await new Promise<void>((resolve) => {
         setTimeout(() => resolve(), 0);
       });
+      chunkIndex += 1;
+      onProgress?.(Math.min(0.96, chunkIndex / totalChunks));
 
       if (start + frameLen >= mono.length) break;
     }
@@ -223,24 +237,31 @@ export class NeuralSeparator {
     throw new Error('Unsupported ONNX output shape for stems');
   }
 
-  private async runHybridSeparation(buffer: AudioBuffer): Promise<Record<StemName, AudioBuffer>> {
+  private async runHybridSeparation(
+    buffer: AudioBuffer,
+    onProgress?: (value: number) => void,
+  ): Promise<Record<StemName, AudioBuffer>> {
+    onProgress?.(0.15);
     const drums = await this.renderFiltered(buffer, {
       type: 'lowpass',
       frequency: 220,
       q: 0.8,
     });
+    onProgress?.(0.45);
 
     const vocals = await this.renderFiltered(buffer, {
       type: 'bandpass',
       frequency: 1700,
       q: 0.85,
     });
+    onProgress?.(0.7);
 
     const instruments = this.createResidual(buffer, drums, vocals, 0.58, 0.62);
 
     this.normalize(drums);
     this.normalize(vocals);
     this.normalize(instruments);
+    onProgress?.(0.95);
 
     return { drums, instruments, vocals };
   }
