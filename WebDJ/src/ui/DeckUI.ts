@@ -174,6 +174,18 @@ export class DeckUI {
   private bind(): void {
     const side = this.deck.id;
 
+    this.deckSurfaceEl.addEventListener('pointerdown', () => {
+      window.dispatchEvent(new CustomEvent('deck-focus', { detail: { deckId: this.deck.id } }));
+    });
+
+    window.addEventListener(
+      'deck-focus',
+      ((e: CustomEvent) => {
+        const focused = e.detail.deckId === this.deck.id;
+        this.deckSurfaceEl.classList.toggle('is-focused', focused);
+      }) as EventListener,
+    );
+
     this.playBtn.addEventListener('click', () => this.deck.togglePlay());
 
     this.el.querySelector(`#cue-btn-${side}`)!.addEventListener('click', () => {
@@ -283,16 +295,19 @@ export class DeckUI {
       this.syncLoopState();
       this.updateMeta();
       this.updateVinylStyle();
+      this.updateDeckSurfaceState();
     });
 
     this.deck.on('play', () => {
       this.playBtn.textContent = '⏸';
       this.playBtn.classList.add('playing');
+      this.updateDeckSurfaceState();
     });
 
     this.deck.on('pause', () => {
       this.playBtn.textContent = '▶';
       this.playBtn.classList.remove('playing');
+      this.updateDeckSurfaceState();
     });
 
     this.deck.on('timeupdate', () => {
@@ -322,6 +337,10 @@ export class DeckUI {
     this.syncTempoKeyUI();
     this.keyLockBtn.setAttribute('aria-pressed', String(this.deck.keyLock));
     this.updateVinylStyle();
+    this.updateDeckSurfaceState();
+    if (this.deck.id === 'A') {
+      this.deckSurfaceEl.classList.add('is-focused');
+    }
   }
 
   private updateMeta(): void {
@@ -389,6 +408,7 @@ export class DeckUI {
     const clamped = Math.max(0, Math.min(1, normalized));
     const deg = -140 + clamped * 280;
     el.style.setProperty('--knob-angle', `${deg}deg`);
+    el.style.setProperty('--knob-fill', `${Math.round(clamped * 100)}%`);
   }
 
   private bindKnobControl(
@@ -403,8 +423,9 @@ export class DeckUI {
     let dragging = false;
     let pointerId: number | null = null;
     let startY = 0;
+    let startX = 0;
     let startValue = 0;
-    const sensitivity = (max - min) / 220;
+    const sensitivity = (max - min) / 300;
 
     const apply = (raw: number): void => {
       const snapped = Math.round(raw / step) * step;
@@ -417,6 +438,7 @@ export class DeckUI {
       dragging = true;
       pointerId = e.pointerId;
       startY = e.clientY;
+      startX = e.clientX;
       startValue = getValue();
       el.setPointerCapture(e.pointerId);
       e.preventDefault();
@@ -424,13 +446,19 @@ export class DeckUI {
 
     el.addEventListener('pointermove', (e) => {
       if (!dragging || pointerId !== e.pointerId) return;
-      const delta = startY - e.clientY;
-      apply(startValue + delta * sensitivity);
+      const deltaY = startY - e.clientY;
+      const deltaX = e.clientX - startX;
+      const precision = e.shiftKey ? 0.35 : 1;
+      apply(startValue + (deltaY + deltaX) * sensitivity * precision);
+      e.preventDefault();
     });
 
     const stop = (e: PointerEvent) => {
       if (pointerId !== e.pointerId) return;
       dragging = false;
+      if (el.hasPointerCapture(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
       pointerId = null;
     };
 
@@ -476,6 +504,12 @@ export class DeckUI {
     this.jogEl.classList.toggle('loaded', Boolean(title));
     this.vinylTextEl.textContent = title ? title.slice(0, 2).toUpperCase() : this.deck.id;
     this.deckSurfaceEl.style.setProperty('--deck-accent-secondary', `hsl(${hue2} 82% 62%)`);
+  }
+
+  private updateDeckSurfaceState(): void {
+    const loaded = Boolean(this.deck.trackName.trim());
+    this.deckSurfaceEl.classList.toggle('is-loaded', loaded);
+    this.deckSurfaceEl.classList.toggle('is-playing', this.deck.playing);
   }
 
   private setupJogWheel(): void {

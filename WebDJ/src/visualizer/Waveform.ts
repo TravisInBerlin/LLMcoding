@@ -74,10 +74,7 @@ export class Waveform {
     ctx.fillRect(0, 0, w, h);
 
     if (!deck.peaks || deck.peaks.length === 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.font = '12px Space Grotesk, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Load track to analyze waveform', w / 2, h / 2 + 4);
+      this.drawPlaceholder(w, h);
       return;
     }
 
@@ -86,6 +83,57 @@ export class Waveform {
     } else {
       this.drawVertical(w, h);
     }
+  }
+
+  private drawPlaceholder(w: number, h: number): void {
+    const { ctx } = this;
+    const centerY = h / 2;
+
+    ctx.strokeStyle = 'rgba(190, 205, 230, 0.14)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= w; x += 20) {
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, h);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= h; y += 8) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(w, y + 0.5);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(122, 200, 255, 0.42)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const points = 96;
+    for (let i = 0; i <= points; i++) {
+      const t = i / points;
+      const x = t * w;
+      const amp = (Math.sin(t * 12.4) + Math.sin(t * 28.2) * 0.5 + Math.cos(t * 43.8) * 0.35) * (h * 0.12);
+      const y = centerY - amp;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 166, 124, 0.34)';
+    ctx.beginPath();
+    for (let i = 0; i <= points; i++) {
+      const t = i / points;
+      const x = t * w;
+      const amp = (Math.cos(t * 10.8) + Math.sin(t * 31.2) * 0.42 + Math.cos(t * 58.5) * 0.2) * (h * 0.08);
+      const y = centerY + amp;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(235, 243, 255, 0.62)';
+    ctx.font = '600 11px Manrope, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Load track to analyze waveform', w / 2, h / 2 + 4);
   }
 
   private drawHorizontal(w: number, h: number): void {

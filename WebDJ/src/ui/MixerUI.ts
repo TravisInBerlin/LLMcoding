@@ -25,6 +25,8 @@ export class MixerUI {
     DeckId,
     { bassCut: HTMLButtonElement; bright: HTMLButtonElement; vocalFocus: HTMLButtonElement; drumFocus: HTMLButtonElement }
   >();
+  private xyPadEls = new Map<DeckId, HTMLElement>();
+  private xyPadValueEls = new Map<DeckId, HTMLElement>();
   private macroState = new Map<DeckId, DeckMacroState>();
   private mutedDecks = new Set<DeckId>();
   private mutedSavedVolume = new Map<DeckId, number>();
@@ -191,6 +193,37 @@ export class MixerUI {
         .join('')}
         </div>
 
+        <div class="xy-pad-section">
+          ${(['A', 'B'] as DeckId[])
+            .map(
+              (id) => `
+              <div class="xy-pad-card">
+                <div class="xy-pad-head">
+                  <span class="xy-pad-title">DECK ${id} XY FX</span>
+                  <span class="xy-pad-value" id="xy-value-${id}">FLT 0 / RVB 0%</span>
+                </div>
+                <div
+                  class="xy-pad"
+                  id="xy-pad-${id}"
+                  role="slider"
+                  tabindex="0"
+                  aria-label="Deck ${id} XY effects pad"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="50"
+                >
+                  <div class="xy-pad-grid"></div>
+                  <div class="xy-pad-crosshair"></div>
+                  <div class="xy-pad-dot"></div>
+                  <span class="xy-axis-label xy-axis-x">Filter</span>
+                  <span class="xy-axis-label xy-axis-y">Reverb</span>
+                </div>
+              </div>
+            `,
+            )
+            .join('')}
+        </div>
+
         <div class="crossfader-section">
           <span class="cf-label">A</span>
           <div
@@ -240,6 +273,8 @@ export class MixerUI {
       this.centerTrackEls.set(id, this.el.querySelector(`#center-track-${id}`) as HTMLElement);
       this.centerMetaEls.set(id, this.el.querySelector(`#center-meta-${id}`) as HTMLElement);
       this.centerTimeEls.set(id, this.el.querySelector(`#center-time-${id}`) as HTMLElement);
+      this.xyPadEls.set(id, this.el.querySelector(`#xy-pad-${id}`) as HTMLElement);
+      this.xyPadValueEls.set(id, this.el.querySelector(`#xy-value-${id}`) as HTMLElement);
     });
   }
 
@@ -256,6 +291,9 @@ export class MixerUI {
       },
     });
     this.setLinearFaderValue(cf, 50, 0, 100);
+    this.crossfader.onChange((pos) => {
+      this.setLinearFaderValue(cf, pos * 100, 0, 100);
+    });
 
     this.decks.forEach((deck) => {
       this.bindVolume(deck);
@@ -266,6 +304,7 @@ export class MixerUI {
       this.bindChannelTools(deck);
       this.bindMixMacros(deck);
     });
+    this.bindXYPads();
   }
 
   private bindCenterMeta(): void {
@@ -433,6 +472,65 @@ export class MixerUI {
     });
 
     apply(get());
+  }
+
+  private bindXYPads(): void {
+    (['A', 'B'] as DeckId[]).forEach((id) => {
+      const deck = this.decks.find((d) => d.id === id);
+      const pad = this.xyPadEls.get(id);
+      const valueEl = this.xyPadValueEls.get(id);
+      if (!deck || !pad || !valueEl) return;
+
+      let pointerId: number | null = null;
+
+      const apply = (x01: number, y01: number): void => {
+        const x = this.clamp(x01, 0, 1);
+        const y = this.clamp(y01, 0, 1);
+        const filter = x * 2 - 1;
+        const reverb = y;
+        deck.setFilterBlend(filter);
+        deck.effects[1].setWet(reverb * 0.95);
+        pad.style.setProperty('--xy-x', `${x}`);
+        pad.style.setProperty('--xy-y', `${y}`);
+        pad.setAttribute('aria-valuenow', `${Math.round(x * 100)}`);
+        valueEl.textContent = `FLT ${filter.toFixed(2)} / RVB ${Math.round(reverb * 100)}%`;
+      };
+
+      const applyFromPointer = (event: PointerEvent): void => {
+        const rect = pad.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const x = (event.clientX - rect.left) / rect.width;
+        const y = 1 - (event.clientY - rect.top) / rect.height;
+        apply(x, y);
+      };
+
+      pad.addEventListener('pointerdown', (e) => {
+        pointerId = e.pointerId;
+        pad.setPointerCapture(e.pointerId);
+        applyFromPointer(e);
+        e.preventDefault();
+      });
+      pad.addEventListener('pointermove', (e) => {
+        if (pointerId !== e.pointerId) return;
+        applyFromPointer(e);
+        e.preventDefault();
+      });
+      const stop = (e: PointerEvent) => {
+        if (pointerId !== e.pointerId) return;
+        if (pad.hasPointerCapture(e.pointerId)) {
+          pad.releasePointerCapture(e.pointerId);
+        }
+        pointerId = null;
+      };
+      pad.addEventListener('pointerup', stop);
+      pad.addEventListener('pointercancel', stop);
+
+      pad.addEventListener('dblclick', () => {
+        apply(0.5, 0);
+      });
+
+      apply(0.5, 0);
+    });
   }
 
   private setLinearFaderValue(el: HTMLElement, value: number, min: number, max: number): void {
@@ -632,6 +730,7 @@ export class MixerUI {
     const clamped = Math.max(0, Math.min(1, normalized));
     const deg = -140 + clamped * 280;
     el.style.setProperty('--knob-angle', `${deg}deg`);
+    el.style.setProperty('--knob-fill', `${Math.round(clamped * 100)}%`);
   }
 
   private clamp(v: number, min: number, max: number): number {
@@ -983,20 +1082,31 @@ export class MixerUI {
     const avg = sum / data.length;
     const level = avg / 255;
 
-    const barH = level * h;
-    const gradient = ctx.createLinearGradient(0, h, 0, 0);
-    gradient.addColorStop(0, '#1491ba');
-    gradient.addColorStop(0.7, '#8ce6ff');
-    gradient.addColorStop(1, '#d6f9ff');
+    const segments = 28;
+    const gap = 1;
+    const segmentH = (h - (segments - 1) * gap) / segments;
+    const active = Math.round(level * segments);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.07)';
-    ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < segments; i++) {
+      const y = h - (i + 1) * segmentH - i * gap;
+      const ratio = i / (segments - 1);
+      const isOn = i < active;
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(2, h - barH, w - 4, barH);
+      let onColor = '#2dc2ff';
+      if (ratio > 0.78) onColor = '#ff5f7f';
+      else if (ratio > 0.62) onColor = '#ffbf66';
 
-    ctx.fillStyle = 'rgba(6, 10, 24, 0.6)';
-    for (let y = 0; y < h; y += 5) {
+      ctx.fillStyle = isOn ? onColor : 'rgba(161, 178, 204, 0.14)';
+      ctx.globalAlpha = isOn ? 0.95 : 0.75;
+      ctx.fillRect(2, y, w - 4, segmentH);
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(215, 227, 246, 0.25)';
+    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+    for (let y = 0; y < h; y += 4) {
+      ctx.fillStyle = 'rgba(6, 10, 24, 0.46)';
       ctx.fillRect(0, y, w, 1);
     }
   }

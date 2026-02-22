@@ -59,6 +59,7 @@ root.innerHTML = `
       <button class="btn btn-mini btn-muted" id="midi-learn-btn" title="選択した操作を次に受けたMIDI信号へ割り当てます">MIDI LEARN</button>
       <button class="btn btn-mini btn-muted" id="midi-learn-cancel-btn" title="MIDI学習モードを中断します">LEARN CANCEL</button>
       <button class="btn btn-mini btn-muted" id="mixer-toggle-btn" title="中央MIXERの表示/非表示を切り替えます">MIXER HIDE</button>
+      <button class="btn btn-mini btn-muted" id="library-toggle-btn" title="ライブラリパネルの表示/非表示を切り替えます">LIBRARY HIDE</button>
       <button class="btn btn-mini btn-muted" id="deck-mode-btn" title="2デッキ/4デッキを切り替えます">4 DECK</button>
       <button class="btn btn-mini btn-muted" id="waveform-mode-btn" title="波形表示を横/縦で切り替えます">WAVE: H</button>
       <select id="transition-style" class="midi-learn-select transition-select" title="クロスフェード時のミックス特性を選びます">
@@ -77,7 +78,7 @@ root.innerHTML = `
     <span class="toolbar-help-item"><strong>MIDI CONNECT</strong>MIDI機器の接続</span>
     <span class="toolbar-help-item"><strong>Learn: Play A</strong>学習対象の操作を選択</span>
     <span class="toolbar-help-item"><strong>MIDI LEARN</strong>次のMIDI信号に割当</span>
-    <span class="toolbar-help-item"><strong>MIXER / 4 DECK / WAVE</strong>画面レイアウト切替</span>
+    <span class="toolbar-help-item"><strong>MIXER / LIBRARY / 4 DECK / WAVE</strong>画面表示の切替</span>
     <span class="toolbar-help-item"><strong>AUTO DROP / AUTOMIX / REC</strong>自動遷移・自動MIX・録音</span>
   </section>
 
@@ -85,8 +86,9 @@ root.innerHTML = `
     <span><strong>1.</strong> Add Files でライブラリに曲を追加</span>
     <span><strong>2.</strong> A/B ボタンでデッキにロード</span>
     <span><strong>3.</strong> PLAY + SYNC で再生開始</span>
-    <span><strong>4.</strong> 中央クロスフェーダーでミックス</span>
-    <span><strong>5.</strong> MIDI LEARN は ESC または LEARN CANCEL で中断</span>
+    <span><strong>4.</strong> XY PAD で Filter/Reverb を同時操作</span>
+    <span><strong>5.</strong> 中央クロスフェーダーでミックス</span>
+    <span><strong>6.</strong> MIDI LEARN は ESC または LEARN CANCEL で中断</span>
   </section>
 
   <main class="dj-stage">
@@ -124,6 +126,7 @@ new LibraryUI(document.getElementById('library-container')!, decks);
 let deckMode: 2 | 4 = 2;
 let waveformMode: WaveformMode = 'horizontal';
 let mixerVisible = true;
+let libraryVisible = true;
 let transitionStyle: TransitionStyle = 'smooth';
 
 const deckModeBtn = document.getElementById('deck-mode-btn') as HTMLButtonElement;
@@ -137,6 +140,7 @@ const midiLearnBtn = document.getElementById('midi-learn-btn') as HTMLButtonElem
 const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as HTMLButtonElement;
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
 const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
+const libraryToggleBtn = document.getElementById('library-toggle-btn') as HTMLButtonElement;
 const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButtonElement;
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 const guidePanel = document.getElementById('guide-panel') as HTMLElement;
@@ -158,9 +162,15 @@ const applyMixerVisibility = (): void => {
   mixerToggleBtn.textContent = mixerVisible ? 'MIXER HIDE' : 'MIXER SHOW';
 };
 
+const applyLibraryVisibility = (): void => {
+  root.classList.toggle('library-hidden', !libraryVisible);
+  libraryToggleBtn.textContent = libraryVisible ? 'LIBRARY HIDE' : 'LIBRARY SHOW';
+};
+
 applyDeckMode();
 applyWaveformMode();
 applyMixerVisibility();
+applyLibraryVisibility();
 
 if (isIPad) {
   statusBadge.textContent = 'iPad touch / low latency';
@@ -455,6 +465,11 @@ mixerToggleBtn.addEventListener('click', () => {
   applyMixerVisibility();
 });
 
+libraryToggleBtn.addEventListener('click', () => {
+  libraryVisible = !libraryVisible;
+  applyLibraryVisibility();
+});
+
 guideToggleBtn.addEventListener('click', () => {
   const visible = guidePanel.classList.contains('active');
   if (visible) {
@@ -478,6 +493,15 @@ window.addEventListener('keydown', (e) => {
 
 let recorder: MediaRecorder | null = null;
 let recordChunks: Blob[] = [];
+let recordTimer: number | null = null;
+let recordStartMs = 0;
+
+const formatRecTimer = (elapsedMs: number): string => {
+  const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+};
 
 recordBtn.addEventListener('click', async () => {
   await engine.resume();
@@ -501,14 +525,25 @@ recordBtn.addEventListener('click', async () => {
     };
 
     recorder.start();
-    recordBtn.textContent = 'REC STOP';
+    recordStartMs = Date.now();
+    const tick = () => {
+      recordBtn.textContent = `REC ${formatRecTimer(Date.now() - recordStartMs)}`;
+    };
+    tick();
+    recordTimer = window.setInterval(tick, 1000);
     recordBtn.classList.add('recording');
+    statusBadge.textContent = 'Recording in progress';
     return;
   }
 
   recorder.stop();
+  if (recordTimer) {
+    clearInterval(recordTimer);
+    recordTimer = null;
+  }
   recordBtn.textContent = 'REC START';
   recordBtn.classList.remove('recording');
+  statusBadge.textContent = 'Recording stopped and exported';
 });
 
 document.addEventListener('click', () => engine.resume(), { once: true });
