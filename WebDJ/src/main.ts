@@ -14,6 +14,7 @@ const decks = deckIds.map((id) => new Deck(engine, id));
 const deckMap = new Map<DeckId, Deck>(decks.map((d) => [d.id, d]));
 
 const crossfader = new Crossfader(deckMap.get('A')!.crossfadeGain, deckMap.get('B')!.crossfadeGain);
+crossfader.onChange((pos) => applyCrossfaderFusion(pos));
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
 root.classList.add('mode-2');
@@ -129,6 +130,22 @@ function parseKeyRoot(key: string): number | null {
   const token = key.split(' ')[0];
   const idx = roots.indexOf(token);
   return idx < 0 ? null : idx;
+}
+
+function applyCrossfaderFusion(pos: number): void {
+  const deckA = deckMap.get('A')!;
+  const deckB = deckMap.get('B')!;
+  const clamped = Math.max(0, Math.min(1, pos));
+
+  // A side: keep rhythm longer, pull vocal earlier.
+  deckA.setStemLevel('drums', 1 - Math.max(0, clamped - 0.65) * 2.2);
+  deckA.setStemLevel('instruments', 1 - Math.max(0, clamped - 0.45) * 2.0);
+  deckA.setStemLevel('vocals', 1 - Math.max(0, clamped - 0.28) * 2.3);
+
+  // B side: introduce drums first, vocals last for cleaner blend.
+  deckB.setStemLevel('drums', Math.min(1, clamped * 1.9));
+  deckB.setStemLevel('instruments', Math.min(1, Math.max(0, clamped - 0.18) * 1.7));
+  deckB.setStemLevel('vocals', Math.min(1, Math.max(0, clamped - 0.38) * 1.8));
 }
 
 // Deck mode toggle
