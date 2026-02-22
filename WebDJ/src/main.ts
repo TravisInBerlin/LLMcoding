@@ -4,7 +4,7 @@ import { Crossfader } from './audio/Crossfader';
 import { DeckUI } from './ui/DeckUI';
 import { MixerUI } from './ui/MixerUI';
 import { LibraryUI } from './ui/LibraryUI';
-import { MidiController } from './midi/MidiController';
+import { MidiController, type MidiLearnTarget } from './midi/MidiController';
 import type { WaveformMode } from './visualizer/Waveform';
 import './style.css';
 
@@ -31,6 +31,30 @@ root.innerHTML = `
     </div>
     <div class="header-actions">
       <button class="btn btn-mini" id="midi-btn">MIDI CONNECT</button>
+      <select id="midi-learn-target" class="midi-learn-select">
+        <option value="playA">Learn: Play A</option>
+        <option value="playB">Learn: Play B</option>
+        <option value="cueA">Learn: Cue A</option>
+        <option value="cueB">Learn: Cue B</option>
+        <option value="syncA">Learn: Sync A</option>
+        <option value="syncB">Learn: Sync B</option>
+        <option value="keyA">Learn: Key A</option>
+        <option value="keyB">Learn: Key B</option>
+        <option value="crossfader">Learn: Crossfader</option>
+        <option value="volA">Learn: Volume A</option>
+        <option value="volB">Learn: Volume B</option>
+        <option value="tempoA">Learn: Tempo A</option>
+        <option value="tempoB">Learn: Tempo B</option>
+        <option value="filterA">Learn: Filter A</option>
+        <option value="filterB">Learn: Filter B</option>
+        <option value="stemVocalA">Learn: Vocal A</option>
+        <option value="stemVocalB">Learn: Vocal B</option>
+        <option value="stemDrumsA">Learn: Drums A</option>
+        <option value="stemDrumsB">Learn: Drums B</option>
+        <option value="stemInstA">Learn: Inst A</option>
+        <option value="stemInstB">Learn: Inst B</option>
+      </select>
+      <button class="btn btn-mini" id="midi-learn-btn">MIDI LEARN</button>
       <button class="btn btn-mini" id="deck-mode-btn">4 DECK</button>
       <button class="btn btn-mini" id="waveform-mode-btn">WAVE: H</button>
       <button class="btn btn-mini" id="automix-btn">AUTOMIX OFF</button>
@@ -75,6 +99,8 @@ const waveformModeBtn = document.getElementById('waveform-mode-btn') as HTMLButt
 const automixBtn = document.getElementById('automix-btn') as HTMLButtonElement;
 const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
 const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
+const midiLearnBtn = document.getElementById('midi-learn-btn') as HTMLButtonElement;
+const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 
 const applyDeckMode = (): void => {
@@ -286,11 +312,22 @@ const midi = new MidiController(
     midiBtn.classList.add('active');
     statusBadge.textContent = `MIDI: ${status.inputName}`;
   },
+  (learnMsg) => {
+    statusBadge.textContent = learnMsg;
+    midiLearnBtn.classList.toggle('active', learnMsg.startsWith('Learning'));
+  },
 );
 
 midiBtn.addEventListener('click', async () => {
   await engine.resume();
   await midi.connect();
+});
+
+midiLearnBtn.addEventListener('click', async () => {
+  await engine.resume();
+  await midi.connect();
+  const target = midiLearnTarget.value as MidiLearnTarget;
+  midi.setLearnTarget(target);
 });
 
 // Recording

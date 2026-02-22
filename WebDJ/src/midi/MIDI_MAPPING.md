@@ -14,3 +14,11 @@ CC:
 - 11/12: Vocal Stem Level Deck A/B
 - 13/14: Drum Stem Level Deck A/B
 - 15/16: Instrument Stem Level Deck A/B
+
+## MIDI Learn
+
+- Use header controls:
+  - Select target from `Learn: ...`
+  - Press `MIDI LEARN`
+  - Move a knob/fader or press a pad/button on your controller
+- Mapping is saved in browser `localStorage` and restored automatically.

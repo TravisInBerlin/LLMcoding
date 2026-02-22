@@ -94,6 +94,16 @@ body {
   gap: 8px;
 }
 
+.midi-learn-select {
+  border: 1px solid var(--line);
+  background: rgba(8, 16, 30, 0.75);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  padding: 6px 8px;
+  min-height: 32px;
+}
+
 .dj-layout {
   min-height: 0;
   display: grid;
@@ -699,6 +709,10 @@ body {
 .touch-mode .btn {
   min-height: 36px;
   padding: 6px 10px;
+}
+
+.touch-mode .midi-learn-select {
+  min-height: 36px;
 }
 
 .touch-mode .btn-hot-cue {
