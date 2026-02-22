@@ -113,6 +113,10 @@ body {
   min-height: 30px;
 }
 
+.transition-select {
+  min-width: 126px;
+}
+
 .guide-panel {
   display: none;
   padding: 7px 10px;
@@ -598,8 +602,29 @@ body {
 }
 
 .btn-cue {
-  background: linear-gradient(180deg, rgba(255, 205, 121, 0.28), rgba(157, 112, 42, 0.22));
-  border-color: rgba(246, 197, 120, 0.36);
+  background: linear-gradient(180deg, rgba(255, 209, 141, 0.26), rgba(124, 86, 36, 0.22));
+  border-color: rgba(255, 211, 144, 0.34);
+}
+
+.btn-sync {
+  background: linear-gradient(180deg, rgba(123, 194, 255, 0.28), rgba(56, 84, 139, 0.2));
+  border-color: rgba(137, 206, 255, 0.34);
+}
+
+.btn-key {
+  background: linear-gradient(180deg, rgba(208, 168, 255, 0.24), rgba(93, 68, 138, 0.2));
+  border-color: rgba(199, 176, 255, 0.3);
+}
+
+.btn-muted {
+  background: linear-gradient(180deg, rgba(228, 236, 253, 0.08), rgba(84, 95, 122, 0.14));
+  border-color: rgba(194, 207, 233, 0.2);
+}
+
+.btn-accent {
+  background: linear-gradient(130deg, rgba(103, 203, 234, 0.32), rgba(242, 145, 95, 0.3));
+  border-color: rgba(194, 225, 245, 0.45);
+  color: #f9fdff;
 }
 
 .btn:hover {
@@ -627,8 +652,8 @@ body {
 .btn-play {
   min-width: 42px;
   font-size: 14px;
-  background: linear-gradient(180deg, rgba(99, 219, 166, 0.32), rgba(30, 123, 81, 0.24));
-  border-color: rgba(108, 224, 175, 0.38);
+  background: linear-gradient(180deg, rgba(118, 213, 175, 0.3), rgba(36, 111, 88, 0.22));
+  border-color: rgba(138, 228, 195, 0.32);
 }
 
 .btn-hot-cue {
@@ -645,6 +670,10 @@ body {
 .btn.recording {
   border-color: #ff5770;
   background: rgba(255, 87, 112, 0.16);
+}
+
+.header-actions .btn {
+  background: linear-gradient(180deg, rgba(224, 236, 255, 0.1), rgba(77, 90, 116, 0.16));
 }
 
 .center-panel {

@@ -8,6 +8,8 @@ import { MidiController, type MidiLearnTarget } from './midi/MidiController';
 import type { WaveformMode } from './visualizer/Waveform';
 import './style.css';
 
+type TransitionStyle = 'smooth' | 'power' | 'neural';
+
 const engine = new AudioEngine();
 const deckIds: DeckId[] = ['A', 'B', 'C', 'D'];
 
@@ -30,7 +32,7 @@ root.innerHTML = `
       <span class="header-badge" id="status-badge">djay-style / iPad Performance</span>
     </div>
     <div class="header-actions">
-      <button class="btn btn-mini" id="midi-btn">MIDI CONNECT</button>
+      <button class="btn btn-mini btn-muted" id="midi-btn">MIDI CONNECT</button>
       <select id="midi-learn-target" class="midi-learn-select">
         <option value="playA">Learn: Play A</option>
         <option value="playB">Learn: Play B</option>
@@ -54,14 +56,20 @@ root.innerHTML = `
         <option value="stemInstA">Learn: Inst A</option>
         <option value="stemInstB">Learn: Inst B</option>
       </select>
-      <button class="btn btn-mini" id="midi-learn-btn">MIDI LEARN</button>
-      <button class="btn btn-mini" id="midi-learn-cancel-btn">LEARN CANCEL</button>
-      <button class="btn btn-mini" id="mixer-toggle-btn">MIXER HIDE</button>
-      <button class="btn btn-mini" id="deck-mode-btn">4 DECK</button>
-      <button class="btn btn-mini" id="waveform-mode-btn">WAVE: H</button>
-      <button class="btn btn-mini" id="guide-toggle-btn">GUIDE</button>
-      <button class="btn btn-mini" id="automix-btn">AUTOMIX OFF</button>
-      <button class="btn btn-mini" id="record-btn">REC START</button>
+      <button class="btn btn-mini btn-muted" id="midi-learn-btn">MIDI LEARN</button>
+      <button class="btn btn-mini btn-muted" id="midi-learn-cancel-btn">LEARN CANCEL</button>
+      <button class="btn btn-mini btn-muted" id="mixer-toggle-btn">MIXER HIDE</button>
+      <button class="btn btn-mini btn-muted" id="deck-mode-btn">4 DECK</button>
+      <button class="btn btn-mini btn-muted" id="waveform-mode-btn">WAVE: H</button>
+      <select id="transition-style" class="midi-learn-select transition-select">
+        <option value="smooth">XFADE: SMOOTH</option>
+        <option value="power">XFADE: POWER</option>
+        <option value="neural">XFADE: NEURAL</option>
+      </select>
+      <button class="btn btn-mini btn-accent" id="auto-drop-btn">AUTO DROP</button>
+      <button class="btn btn-mini btn-muted" id="guide-toggle-btn">GUIDE</button>
+      <button class="btn btn-mini btn-key" id="automix-btn">AUTOMIX OFF</button>
+      <button class="btn btn-mini btn-cue" id="record-btn">REC START</button>
     </div>
   </header>
 
@@ -108,9 +116,12 @@ new LibraryUI(document.getElementById('library-container')!, decks);
 let deckMode: 2 | 4 = 2;
 let waveformMode: WaveformMode = 'horizontal';
 let mixerVisible = true;
+let transitionStyle: TransitionStyle = 'smooth';
 
 const deckModeBtn = document.getElementById('deck-mode-btn') as HTMLButtonElement;
 const waveformModeBtn = document.getElementById('waveform-mode-btn') as HTMLButtonElement;
+const transitionStyleSelect = document.getElementById('transition-style') as HTMLSelectElement;
+const autoDropBtn = document.getElementById('auto-drop-btn') as HTMLButtonElement;
 const automixBtn = document.getElementById('automix-btn') as HTMLButtonElement;
 const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
 const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
@@ -207,6 +218,28 @@ function applyCrossfaderFusion(pos: number): void {
   const deckB = deckMap.get('B')!;
   const clamped = Math.max(0, Math.min(1, pos));
 
+  if (transitionStyle === 'power') {
+    deckA.setStemLevel('drums', 1 - Math.max(0, clamped - 0.5) * 2.5);
+    deckA.setStemLevel('instruments', 1 - Math.max(0, clamped - 0.36) * 2.4);
+    deckA.setStemLevel('vocals', 1 - Math.max(0, clamped - 0.18) * 2.8);
+
+    deckB.setStemLevel('drums', Math.min(1, clamped * 2.2));
+    deckB.setStemLevel('instruments', Math.min(1, Math.max(0, clamped - 0.12) * 2.0));
+    deckB.setStemLevel('vocals', Math.min(1, Math.max(0, clamped - 0.28) * 2.2));
+    return;
+  }
+
+  if (transitionStyle === 'neural') {
+    deckA.setStemLevel('drums', 1 - Math.max(0, clamped - 0.72) * 2.2);
+    deckA.setStemLevel('instruments', 1 - Math.max(0, clamped - 0.5) * 1.8);
+    deckA.setStemLevel('vocals', 1 - Math.max(0, clamped - 0.2) * 2.4);
+
+    deckB.setStemLevel('drums', Math.min(1, clamped * 2.0));
+    deckB.setStemLevel('instruments', Math.min(1, Math.max(0, clamped - 0.2) * 1.6));
+    deckB.setStemLevel('vocals', Math.min(1, Math.max(0, clamped - 0.42) * 2.0));
+    return;
+  }
+
   deckA.setStemLevel('drums', 1 - Math.max(0, clamped - 0.65) * 2.2);
   deckA.setStemLevel('instruments', 1 - Math.max(0, clamped - 0.45) * 2.0);
   deckA.setStemLevel('vocals', 1 - Math.max(0, clamped - 0.28) * 2.3);
@@ -226,6 +259,11 @@ waveformModeBtn.addEventListener('click', () => {
   applyWaveformMode();
 });
 
+transitionStyleSelect.addEventListener('change', () => {
+  transitionStyle = transitionStyleSelect.value as TransitionStyle;
+  statusBadge.textContent = `Transition style: ${transitionStyle.toUpperCase()}`;
+});
+
 let automixEnabled = false;
 let automixTimer: number | null = null;
 
@@ -242,41 +280,74 @@ const setAutomix = (enabled: boolean): void => {
   if (!enabled) return;
 
   automixTimer = window.setInterval(() => {
-    const deckA = deckMap.get('A')!;
-    const deckB = deckMap.get('B')!;
-
-    if (!deckA.buffer || !deckB.buffer) return;
-
-    if (!deckA.playing && !deckB.playing) {
-      deckA.play();
-      crossfader.setPosition(0);
-      return;
-    }
-
-    if (deckA.playing && !deckB.playing) {
-      deckB.syncTo(deckA.bpm);
-      deckB.play();
-      fadeCrossfader(0, 1, 6000);
-      return;
-    }
-
-    if (deckB.playing && !deckA.playing) {
-      deckA.syncTo(deckB.bpm);
-      deckA.play();
-      fadeCrossfader(1, 0, 6000);
-      return;
-    }
-
-    const nextToB = crossfader.position < 0.5;
-    if (nextToB) {
-      deckB.syncTo(deckA.bpm);
-      fadeCrossfader(crossfader.position, 1, 6000);
-    } else {
-      deckA.syncTo(deckB.bpm);
-      fadeCrossfader(crossfader.position, 0, 6000);
-    }
+    void runAutoDropTransition();
   }, 12000);
 };
+
+async function runAutoDropTransition(): Promise<void> {
+  const deckA = deckMap.get('A')!;
+  const deckB = deckMap.get('B')!;
+
+  if (!deckA.buffer || !deckB.buffer) {
+    statusBadge.textContent = 'Auto Drop: load tracks on A/B first';
+    return;
+  }
+
+  if (!deckA.playing && !deckB.playing) {
+    deckA.play();
+    crossfader.setPosition(0);
+    statusBadge.textContent = 'Auto Drop: started Deck A';
+    return;
+  }
+
+  const source = deckA.playing ? deckA : deckB;
+  const target = source.id === 'A' ? deckB : deckA;
+
+  if (!target.playing) {
+    if (source.bpm > 0) target.syncTo(source.bpm);
+
+    const srcRoot = parseKeyRoot(source.musicalKey);
+    const tgtRoot = parseKeyRoot(target.musicalKey);
+    if (srcRoot !== null && tgtRoot !== null) {
+      let diff = srcRoot - tgtRoot;
+      if (diff > 6) diff -= 12;
+      if (diff < -6) diff += 12;
+      target.matchKey(diff);
+    }
+    target.play();
+  }
+
+  const to = target.id === 'A' ? 0 : 1;
+  const from = crossfader.position;
+  const baseDuration = transitionStyle === 'power' ? 3600 : transitionStyle === 'neural' ? 5600 : 6800;
+
+  if (transitionStyle === 'power') {
+    source.effects[0].setWet(0.42);
+    source.effects[2].setWet(0.25);
+    target.effects[1].setWet(0.24);
+  } else if (transitionStyle === 'neural') {
+    source.setStemLevel('vocals', Math.min(source.getStemLevel('vocals'), 0.45));
+    target.setStemLevel('drums', 1);
+    target.setStemLevel('instruments', Math.max(0.72, target.getStemLevel('instruments')));
+    target.effects[0].setWet(0.2);
+  } else {
+    source.effects[0].setWet(0.26);
+    target.effects[1].setWet(0.16);
+  }
+
+  fadeCrossfader(from, to, baseDuration);
+
+  window.setTimeout(() => {
+    source.effects[0].setWet(0);
+    source.effects[1].setWet(0);
+    source.effects[2].setWet(0);
+    target.effects[0].setWet(0);
+    target.effects[1].setWet(0);
+    target.effects[2].setWet(0);
+  }, baseDuration + 400);
+
+  statusBadge.textContent = `Auto Drop: ${source.id} -> ${target.id} (${transitionStyle.toUpperCase()})`;
+}
 
 function fadeCrossfader(from: number, to: number, durationMs: number): void {
   const start = performance.now();
@@ -293,6 +364,10 @@ function fadeCrossfader(from: number, to: number, durationMs: number): void {
 
 automixBtn.addEventListener('click', () => {
   setAutomix(!automixEnabled);
+});
+
+autoDropBtn.addEventListener('click', () => {
+  void runAutoDropTransition();
 });
 
 const midi = new MidiController(

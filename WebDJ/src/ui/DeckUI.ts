@@ -93,17 +93,17 @@ export class DeckUI {
             <div class="transport-row">
               <button class="btn btn-cue" id="cue-btn-${side}" title="Return to cue">CUE</button>
               <button class="btn btn-play" id="play-btn-${side}" title="Play/Pause">▶</button>
-              <button class="btn btn-mini" id="sync-btn-${side}" title="Sync tempo">SYNC</button>
-              <button class="btn btn-mini" id="key-match-${side}" title="Match key">KEY MATCH</button>
+              <button class="btn btn-mini btn-sync" id="sync-btn-${side}" title="Sync tempo">SYNC</button>
+              <button class="btn btn-mini btn-key" id="key-match-${side}" title="Match key">KEY MATCH</button>
             </div>
 
             <div class="loop-controls">
-              <button class="btn btn-loop" id="loop-in-${side}" title="Set loop in">IN</button>
-              <button class="btn btn-loop" id="loop-out-${side}" title="Set loop out">OUT</button>
-              <button class="btn btn-loop-toggle" id="loop-toggle-${side}" title="Toggle loop">LOOP</button>
-              <button class="btn btn-loop" id="loop-save-${side}" title="Save loop">SAVE</button>
+              <button class="btn btn-loop btn-muted" id="loop-in-${side}" title="Set loop in">IN</button>
+              <button class="btn btn-loop btn-muted" id="loop-out-${side}" title="Set loop out">OUT</button>
+              <button class="btn btn-loop-toggle btn-muted" id="loop-toggle-${side}" title="Toggle loop">LOOP</button>
+              <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="Save loop">SAVE</button>
               ${[1, 2, 4, 8, 16]
-                .map((b) => `<button class="btn btn-auto-loop" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`)
+                .map((b) => `<button class="btn btn-auto-loop btn-muted" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`)
                 .join('')}
             </div>
 
