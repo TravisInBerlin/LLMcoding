@@ -1,6 +1,13 @@
 import { Deck, type DeckId, type StemName } from '../audio/Deck';
 import { Crossfader } from '../audio/Crossfader';
 
+interface DeckMacroState {
+  bassCutLowEq: number | null;
+  brightEq: { hi: number; mid: number } | null;
+  vocalFocusStems: Record<StemName, number> | null;
+  drumFocusStems: Record<StemName, number> | null;
+}
+
 export class MixerUI {
   private decks: Deck[];
   private crossfader: Crossfader;
@@ -14,6 +21,11 @@ export class MixerUI {
   private volumeSliderEls = new Map<DeckId, HTMLInputElement>();
   private muteButtons = new Map<DeckId, HTMLButtonElement>();
   private soloButtons = new Map<DeckId, HTMLButtonElement>();
+  private macroButtons = new Map<
+    DeckId,
+    { bassCut: HTMLButtonElement; bright: HTMLButtonElement; vocalFocus: HTMLButtonElement; drumFocus: HTMLButtonElement }
+  >();
+  private macroState = new Map<DeckId, DeckMacroState>();
   private mutedDecks = new Set<DeckId>();
   private mutedSavedVolume = new Map<DeckId, number>();
   private soloDeck: DeckId | null = null;
@@ -52,6 +64,19 @@ export class MixerUI {
           </div>
         </div>
 
+        <div class="mixer-legend" aria-label="Mixer label guide">
+          <span class="mixer-legend-item"><strong>HI</strong> High EQ</span>
+          <span class="mixer-legend-item"><strong>MID</strong> Mid EQ</span>
+          <span class="mixer-legend-item"><strong>LOW</strong> Low EQ</span>
+          <span class="mixer-legend-item"><strong>FLT</strong> Tone Filter</span>
+          <span class="mixer-legend-item"><strong>DRM</strong> Drums</span>
+          <span class="mixer-legend-item"><strong>INS</strong> Instruments</span>
+          <span class="mixer-legend-item"><strong>VOC</strong> Vocals</span>
+          <span class="mixer-legend-item"><strong>ECHO</strong> Echo</span>
+          <span class="mixer-legend-item"><strong>RVB</strong> Reverb</span>
+          <span class="mixer-legend-item"><strong>FX FLT</strong> FX Filter</span>
+        </div>
+
         <div class="mixer-channels">
           ${this.decks
         .map(
@@ -63,22 +88,52 @@ export class MixerUI {
                 </div>
 
                 <div class="compact-row compact-row-4">
-                  <div class="compact-item"><span>HI</span><button class="mixer-knob" id="eq-hi-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
-                  <div class="compact-item"><span>MID</span><button class="mixer-knob" id="eq-mid-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
-                  <div class="compact-item"><span>LOW</span><button class="mixer-knob" id="eq-lo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
-                  <div class="compact-item"><span>FLT</span><button class="mixer-knob" id="filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item" title="HI: High EQ">
+                    <span class="compact-item-label"><strong>HI</strong><small>HIGH EQ</small></span>
+                    <button class="mixer-knob" id="eq-hi-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="MID: Mid EQ">
+                    <span class="compact-item-label"><strong>MID</strong><small>MID EQ</small></span>
+                    <button class="mixer-knob" id="eq-mid-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="LOW: Low EQ">
+                    <span class="compact-item-label"><strong>LOW</strong><small>LOW EQ</small></span>
+                    <button class="mixer-knob" id="eq-lo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="FLT: Tone Filter">
+                    <span class="compact-item-label"><strong>FLT</strong><small>TONE FILTER</small></span>
+                    <button class="mixer-knob" id="filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
                 </div>
 
                 <div class="compact-row compact-row-3">
-                  <div class="compact-item"><span>DRM</span><button class="mixer-knob" id="stem-drums-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
-                  <div class="compact-item"><span>INS</span><button class="mixer-knob" id="stem-instruments-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
-                  <div class="compact-item"><span>VOC</span><button class="mixer-knob" id="stem-vocals-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item" title="DRM: Drums stem level">
+                    <span class="compact-item-label"><strong>DRM</strong><small>DRUMS</small></span>
+                    <button class="mixer-knob" id="stem-drums-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="INS: Instruments stem level">
+                    <span class="compact-item-label"><strong>INS</strong><small>INSTRUMENTS</small></span>
+                    <button class="mixer-knob" id="stem-instruments-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="VOC: Vocals stem level">
+                    <span class="compact-item-label"><strong>VOC</strong><small>VOCALS</small></span>
+                    <button class="mixer-knob" id="stem-vocals-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
                 </div>
 
                 <div class="compact-row compact-row-3">
-                  <div class="compact-item"><span>ECHO</span><button class="mixer-knob" id="fx-echo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
-                  <div class="compact-item"><span>RVB</span><button class="mixer-knob" id="fx-reverb-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
-                  <div class="compact-item"><span>FX FLT</span><button class="mixer-knob" id="fx-filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item" title="ECHO: Echo amount">
+                    <span class="compact-item-label"><strong>ECHO</strong><small>ECHO</small></span>
+                    <button class="mixer-knob" id="fx-echo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="RVB: Reverb amount">
+                    <span class="compact-item-label"><strong>RVB</strong><small>REVERB</small></span>
+                    <button class="mixer-knob" id="fx-reverb-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="FX FLT: Effect filter amount">
+                    <span class="compact-item-label"><strong>FX FLT</strong><small>FX FILTER</small></span>
+                    <button class="mixer-knob" id="fx-filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
                 </div>
 
                 <div class="channel-foot">
@@ -92,15 +147,28 @@ export class MixerUI {
                     <button class="btn btn-mini btn-muted" id="reset-${deck.id}" title="Reset EQ/FX/Stem/Volume">RESET</button>
                   </div>
 
-                  <div class="meter-fader-stack">
-                    <div class="meter-stack">
-                      <span class="meter-label" title="Output level meter">VU</span>
-                      <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="84" title="Output meter"></canvas>
+                  <div class="channel-lower-grid">
+                    <div class="macro-bank">
+                      <span class="macro-title">MIX MACRO</span>
+                      <div class="macro-grid">
+                        <button class="btn btn-mini btn-macro" id="macro-bass-cut-${deck.id}" title="LOW EQを下げてベース帯域を整理">BASS CUT</button>
+                        <button class="btn btn-mini btn-macro" id="macro-bright-${deck.id}" title="HIGH/MID EQを少し持ち上げる">BRIGHT+</button>
+                        <button class="btn btn-mini btn-macro" id="macro-vocal-${deck.id}" title="ボーカルを前に出す">VOCAL FOCUS</button>
+                        <button class="btn btn-mini btn-macro" id="macro-drum-${deck.id}" title="ドラムを前に出す">DRUM FOCUS</button>
+                      </div>
+                      <span class="macro-help">クリックでON/OFF</span>
                     </div>
-                    <div class="fader-stack">
-                      <span class="meter-label" title="Channel volume fader">VOL</span>
-                      <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical" title="Channel volume">
-                      <span class="meter-value" id="vol-value-${deck.id}">80%</span>
+
+                    <div class="meter-fader-stack">
+                      <div class="meter-stack">
+                        <span class="meter-label" title="Output level meter">VU</span>
+                        <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="84" title="Output meter"></canvas>
+                      </div>
+                      <div class="fader-stack">
+                        <span class="meter-label" title="Channel volume fader">VOL</span>
+                        <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical" title="Channel volume">
+                        <span class="meter-value" id="vol-value-${deck.id}">80%</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -127,6 +195,18 @@ export class MixerUI {
       this.volumeSliderEls.set(deck.id, this.el.querySelector(`#vol-${deck.id}`) as HTMLInputElement);
       this.muteButtons.set(deck.id, this.el.querySelector(`#mute-${deck.id}`) as HTMLButtonElement);
       this.soloButtons.set(deck.id, this.el.querySelector(`#solo-${deck.id}`) as HTMLButtonElement);
+      this.macroButtons.set(deck.id, {
+        bassCut: this.el.querySelector(`#macro-bass-cut-${deck.id}`) as HTMLButtonElement,
+        bright: this.el.querySelector(`#macro-bright-${deck.id}`) as HTMLButtonElement,
+        vocalFocus: this.el.querySelector(`#macro-vocal-${deck.id}`) as HTMLButtonElement,
+        drumFocus: this.el.querySelector(`#macro-drum-${deck.id}`) as HTMLButtonElement,
+      });
+      this.macroState.set(deck.id, {
+        bassCutLowEq: null,
+        brightEq: null,
+        vocalFocusStems: null,
+        drumFocusStems: null,
+      });
     });
 
     (['A', 'B'] as DeckId[]).forEach((id) => {
@@ -149,6 +229,7 @@ export class MixerUI {
       this.bindStems(deck);
       this.bindNeuralFX(deck);
       this.bindChannelTools(deck);
+      this.bindMixMacros(deck);
     });
   }
 
@@ -453,7 +534,173 @@ export class MixerUI {
     });
   }
 
+  private bindMixMacros(deck: Deck): void {
+    const macro = this.macroButtons.get(deck.id);
+    if (!macro) return;
+
+    macro.bassCut.addEventListener('click', () => {
+      this.toggleBassCut(deck);
+    });
+    macro.bright.addEventListener('click', () => {
+      this.toggleBright(deck);
+    });
+    macro.vocalFocus.addEventListener('click', () => {
+      this.toggleVocalFocus(deck);
+    });
+    macro.drumFocus.addEventListener('click', () => {
+      this.toggleDrumFocus(deck);
+    });
+  }
+
+  private getMacroState(deckId: DeckId): DeckMacroState {
+    const existing = this.macroState.get(deckId);
+    if (existing) return existing;
+    const initial: DeckMacroState = {
+      bassCutLowEq: null,
+      brightEq: null,
+      vocalFocusStems: null,
+      drumFocusStems: null,
+    };
+    this.macroState.set(deckId, initial);
+    return initial;
+  }
+
+  private setMacroButton(deckId: DeckId, key: keyof DeckMacroState, active: boolean): void {
+    const macro = this.macroButtons.get(deckId);
+    if (!macro) return;
+
+    if (key === 'bassCutLowEq') macro.bassCut.classList.toggle('active', active);
+    if (key === 'brightEq') macro.bright.classList.toggle('active', active);
+    if (key === 'vocalFocusStems') macro.vocalFocus.classList.toggle('active', active);
+    if (key === 'drumFocusStems') macro.drumFocus.classList.toggle('active', active);
+  }
+
+  private toggleBassCut(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.bassCutLowEq !== null) {
+      deck.eqLow.gain.value = state.bassCutLowEq;
+      state.bassCutLowEq = null;
+      this.setMacroButton(deck.id, 'bassCutLowEq', false);
+      this.syncDeckControlAngles(deck.id);
+      return;
+    }
+    state.bassCutLowEq = deck.eqLow.gain.value;
+    deck.eqLow.gain.value = -14;
+    this.setMacroButton(deck.id, 'bassCutLowEq', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private toggleBright(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.brightEq) {
+      deck.eqHigh.gain.value = state.brightEq.hi;
+      deck.eqMid.gain.value = state.brightEq.mid;
+      state.brightEq = null;
+      this.setMacroButton(deck.id, 'brightEq', false);
+      this.syncDeckControlAngles(deck.id);
+      return;
+    }
+    state.brightEq = { hi: deck.eqHigh.gain.value, mid: deck.eqMid.gain.value };
+    deck.eqHigh.gain.value = 8;
+    deck.eqMid.gain.value = 2;
+    this.setMacroButton(deck.id, 'brightEq', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private snapshotStemLevels(deck: Deck): Record<StemName, number> {
+    return {
+      drums: deck.getStemLevel('drums'),
+      instruments: deck.getStemLevel('instruments'),
+      vocals: deck.getStemLevel('vocals'),
+    };
+  }
+
+  private applyStemSnapshot(deck: Deck, snapshot: Record<StemName, number>): void {
+    deck.setStemLevel('drums', snapshot.drums);
+    deck.setStemLevel('instruments', snapshot.instruments);
+    deck.setStemLevel('vocals', snapshot.vocals);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private toggleVocalFocus(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.vocalFocusStems) {
+      this.applyStemSnapshot(deck, state.vocalFocusStems);
+      state.vocalFocusStems = null;
+      this.setMacroButton(deck.id, 'vocalFocusStems', false);
+      return;
+    }
+
+    if (state.drumFocusStems) {
+      this.applyStemSnapshot(deck, state.drumFocusStems);
+      state.drumFocusStems = null;
+      this.setMacroButton(deck.id, 'drumFocusStems', false);
+    }
+
+    state.vocalFocusStems = this.snapshotStemLevels(deck);
+    deck.setStemLevel('vocals', 1);
+    deck.setStemLevel('instruments', 0.34);
+    deck.setStemLevel('drums', 0.22);
+    this.setMacroButton(deck.id, 'vocalFocusStems', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private toggleDrumFocus(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.drumFocusStems) {
+      this.applyStemSnapshot(deck, state.drumFocusStems);
+      state.drumFocusStems = null;
+      this.setMacroButton(deck.id, 'drumFocusStems', false);
+      return;
+    }
+
+    if (state.vocalFocusStems) {
+      this.applyStemSnapshot(deck, state.vocalFocusStems);
+      state.vocalFocusStems = null;
+      this.setMacroButton(deck.id, 'vocalFocusStems', false);
+    }
+
+    state.drumFocusStems = this.snapshotStemLevels(deck);
+    deck.setStemLevel('drums', 1);
+    deck.setStemLevel('instruments', 0.48);
+    deck.setStemLevel('vocals', 0.24);
+    this.setMacroButton(deck.id, 'drumFocusStems', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private clearMixMacros(deckId: DeckId): void {
+    const state = this.getMacroState(deckId);
+    state.bassCutLowEq = null;
+    state.brightEq = null;
+    state.vocalFocusStems = null;
+    state.drumFocusStems = null;
+    this.setMacroButton(deckId, 'bassCutLowEq', false);
+    this.setMacroButton(deckId, 'brightEq', false);
+    this.setMacroButton(deckId, 'vocalFocusStems', false);
+    this.setMacroButton(deckId, 'drumFocusStems', false);
+  }
+
+  private syncDeckControlAngles(deckId: DeckId): void {
+    const deck = this.decks.find((d) => d.id === deckId);
+    if (!deck) return;
+
+    const set = (id: string, value: number, min: number, max: number): void => {
+      const el = this.el.querySelector(`#${id}-${deckId}`) as HTMLElement | null;
+      if (!el) return;
+      this.setMixerKnobAngle(el, value, min, max);
+    };
+
+    set('eq-hi', deck.eqHigh.gain.value, -18, 18);
+    set('eq-mid', deck.eqMid.gain.value, -18, 18);
+    set('eq-lo', deck.eqLow.gain.value, -18, 18);
+    set('stem-drums', deck.getStemLevel('drums') * 100, 0, 100);
+    set('stem-instruments', deck.getStemLevel('instruments') * 100, 0, 100);
+    set('stem-vocals', deck.getStemLevel('vocals') * 100, 0, 100);
+  }
+
   private resetChannel(deckId: DeckId): void {
+    this.clearMixMacros(deckId);
+
     const ids = [
       `eq-hi-${deckId}`,
       `eq-mid-${deckId}`,
@@ -484,6 +731,7 @@ export class MixerUI {
     }
 
     this.setChannelVolume(deckId, 80);
+    this.syncDeckControlAngles(deckId);
   }
 
   private toggleMute(deckId: DeckId): void {
