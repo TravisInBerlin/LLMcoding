@@ -7,6 +7,7 @@ export class DeckUI {
   private waveform!: Waveform;
   private jogAngle = 0;
   private jogEl!: HTMLElement;
+  private vinylTextEl!: HTMLElement;
   private timeEl!: HTMLElement;
   private bpmEl!: HTMLElement;
   private keyEl!: HTMLElement;
@@ -66,8 +67,12 @@ export class DeckUI {
         <div class="deck-main">
           <div class="jog-zone">
             <div class="jog-wheel" id="jog-${side}">
-              <div class="jog-dot"></div>
-              <div class="jog-label">${side}</div>
+              <div class="vinyl-grooves"></div>
+              <div class="vinyl-center">
+                <div class="vinyl-spindle"></div>
+                <div class="vinyl-text" id="vinyl-text-${side}">${side}</div>
+              </div>
+              <div class="vinyl-highlight"></div>
             </div>
             <div class="platter-label">DISC</div>
           </div>
@@ -114,6 +119,7 @@ export class DeckUI {
     this.waveform = new Waveform(canvas, this.deck, this.accentColor);
 
     this.jogEl = this.el.querySelector(`#jog-${side}`)!;
+    this.vinylTextEl = this.el.querySelector(`#vinyl-text-${side}`)!;
     this.timeEl = this.el.querySelector(`#time-${side}`)!;
     this.bpmEl = this.el.querySelector(`#bpm-${side}`)!;
     this.keyEl = this.el.querySelector(`#key-${side}`)!;
@@ -219,6 +225,7 @@ export class DeckUI {
       this.trackEl.textContent = this.deck.trackName;
       this.syncCueState();
       this.updateMeta();
+      this.updateVinylStyle();
     });
 
     this.deck.on('play', () => {
@@ -251,6 +258,7 @@ export class DeckUI {
 
     this.updateCueBankUI();
     this.syncCueState();
+    this.updateVinylStyle();
   }
 
   private updateMeta(): void {
@@ -287,6 +295,19 @@ export class DeckUI {
     this.cueBankButtons.forEach((btn, idx) => {
       btn.classList.toggle('active', idx === this.cueBank);
     });
+  }
+
+  private updateVinylStyle(): void {
+    const title = this.deck.trackName.trim();
+    const seed = title || this.deck.id;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) & 0xffff;
+    }
+    const hue = Math.abs(hash) % 360;
+    this.jogEl.style.setProperty('--vinyl-hue', `${hue}`);
+    this.jogEl.classList.toggle('loaded', Boolean(title));
+    this.vinylTextEl.textContent = title ? title.slice(0, 2).toUpperCase() : this.deck.id;
   }
 
   private setupJogWheel(): void {

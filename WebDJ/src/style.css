@@ -305,36 +305,82 @@ body {
 }
 
 .jog-wheel {
-  width: 156px;
-  height: 156px;
+  width: 142px;
+  height: 142px;
   border-radius: 50%;
   border: 1px solid var(--line-strong);
-  background: radial-gradient(circle at 32% 27%, rgba(188, 204, 235, 0.92), rgba(49, 66, 101, 0.95) 42%, rgba(13, 20, 35, 0.95));
-  box-shadow: inset 0 0 0 7px rgba(10, 16, 30, 0.75), inset 0 0 0 10px rgba(219, 228, 250, 0.13);
+  background: radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.12), rgba(27, 32, 43, 0.94) 38%, rgba(8, 10, 15, 0.98) 74%);
+  box-shadow: inset 0 0 0 3px rgba(5, 8, 14, 0.85), inset 0 0 0 5px rgba(255, 255, 255, 0.05),
+    0 6px 16px rgba(0, 0, 0, 0.35);
   position: relative;
+  overflow: hidden;
   touch-action: none;
+  --vinyl-hue: 210;
 }
 
-.jog-dot {
+.vinyl-grooves {
   position: absolute;
-  top: 8px;
-  left: calc(50% - 3px);
-  width: 6px;
-  height: 6px;
+  inset: 8px;
   border-radius: 50%;
-  background: #fff;
+  background: repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.06) 0 1px, rgba(0, 0, 0, 0) 1px 4px);
+  opacity: 0.42;
 }
 
-.jog-label {
+.vinyl-center {
   position: absolute;
-  inset: 0;
+  inset: calc(50% - 34px);
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: radial-gradient(
+    circle at 34% 28%,
+    hsl(var(--vinyl-hue) 85% 70%),
+    hsl(var(--vinyl-hue) 72% 45%) 46%,
+    hsl(calc(var(--vinyl-hue) + 28) 78% 32%) 100%
+  );
   display: grid;
   place-items: center;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35), inset 0 0 16px rgba(255, 255, 255, 0.18);
+}
+
+.vinyl-spindle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fbfdff, #a4afc8 65%, #6e7892);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  z-index: 2;
+}
+
+.vinyl-text {
+  position: absolute;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 70px;
+  font-size: 24px;
   line-height: 1;
-  transform: scaleY(0.78);
-  color: rgba(228, 238, 255, 0.48);
+  transform: scaleY(0.8);
+  color: rgba(245, 249, 255, 0.88);
+  letter-spacing: 0.8px;
+}
+
+.vinyl-highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 208deg,
+    rgba(255, 255, 255, 0) 0deg,
+    rgba(255, 255, 255, 0.12) 34deg,
+    rgba(255, 255, 255, 0) 78deg,
+    rgba(255, 255, 255, 0) 360deg
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.jog-wheel.loaded .vinyl-grooves {
+  opacity: 0.56;
 }
 
 .platter-label {
@@ -948,8 +994,8 @@ body {
   }
 
   .jog-wheel {
-    width: 136px;
-    height: 136px;
+    width: 124px;
+    height: 124px;
   }
 
   .deck-strip-title {
@@ -1028,12 +1074,8 @@ body {
   }
 
   .jog-wheel {
-    width: 96px;
-    height: 96px;
-  }
-
-  .jog-label {
-    font-size: 50px;
+    width: 94px;
+    height: 94px;
   }
 
   .mixer-channels {
