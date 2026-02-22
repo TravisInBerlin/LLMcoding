@@ -447,6 +447,17 @@ body {
   gap: 4px;
 }
 
+.neural-fx-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.btn-neural-fx {
+  font-size: 9px;
+  padding: 3px 4px;
+}
+
 .eq-knob-wrap,
 .fx-knob-wrap,
 .stem-row {

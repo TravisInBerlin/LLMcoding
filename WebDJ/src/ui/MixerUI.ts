@@ -48,6 +48,10 @@ export class MixerUI {
                 <div class="fx-knob-wrap"><label>RVB</label><input type="range" class="fx-knob" id="fx-reverb-${deck.id}" min="0" max="100" value="0"></div>
                 <div class="fx-knob-wrap"><label>FX FLT</label><input type="range" class="fx-knob" id="fx-filter-${deck.id}" min="0" max="100" value="0"></div>
               </div>
+              <div class="neural-fx-row">
+                <button class="btn btn-neural-fx" id="nfx-vocal-echo-${deck.id}">VOCAL ECHO</button>
+                <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
+              </div>
 
               <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="120"></canvas>
               <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical">
@@ -83,6 +87,7 @@ export class MixerUI {
       this.bindEQ(deck);
       this.bindFX(deck);
       this.bindStems(deck);
+      this.bindNeuralFX(deck);
     });
   }
 
@@ -150,6 +155,40 @@ export class MixerUI {
         slider.value = `${next}`;
         slider.dispatchEvent(new Event('input'));
       });
+    });
+  }
+
+  private bindNeuralFX(deck: Deck): void {
+    const vocalBtn = this.el.querySelector(`#nfx-vocal-echo-${deck.id}`) as HTMLButtonElement;
+    const drumBtn = this.el.querySelector(`#nfx-drum-filter-${deck.id}`) as HTMLButtonElement;
+
+    let vocalEchoOn = false;
+    let drumFilterOn = false;
+
+    vocalBtn.addEventListener('click', () => {
+      vocalEchoOn = !vocalEchoOn;
+      vocalBtn.classList.toggle('active', vocalEchoOn);
+      if (vocalEchoOn) {
+        deck.setStemLevel('vocals', 1);
+        deck.setStemLevel('instruments', Math.min(deck.getStemLevel('instruments'), 0.45));
+        deck.effects[0].setWet(0.62);
+        deck.effects[1].setWet(0.3);
+      } else {
+        deck.effects[0].setWet(0);
+        deck.effects[1].setWet(0);
+      }
+    });
+
+    drumBtn.addEventListener('click', () => {
+      drumFilterOn = !drumFilterOn;
+      drumBtn.classList.toggle('active', drumFilterOn);
+      if (drumFilterOn) {
+        deck.setStemLevel('drums', 1);
+        deck.setStemLevel('vocals', Math.min(deck.getStemLevel('vocals'), 0.45));
+        deck.setFilterBlend(-0.72);
+      } else {
+        deck.setFilterBlend(0);
+      }
     });
   }
 
