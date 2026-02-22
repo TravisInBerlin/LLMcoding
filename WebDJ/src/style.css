@@ -797,6 +797,21 @@ body {
   border-color: rgba(194, 225, 245, 0.4);
 }
 
+.quick-import-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 220;
+  min-height: 42px;
+  min-width: 128px;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(198, 224, 255, 0.28);
+}
+
+.library-hidden .quick-import-fab {
+  right: 14px;
+}
+
 .btn-hot-cue {
   padding: 0;
   min-height: 24px;
@@ -1791,6 +1806,12 @@ body {
 
 .touch-mode .midi-learn-select {
   min-height: 44px;
+}
+
+.touch-mode .quick-import-fab {
+  min-height: 48px;
+  min-width: 154px;
+  font-size: 12px;
 }
 
 .touch-mode .btn-hot-cue {

@@ -105,6 +105,7 @@ root.innerHTML = `
   </main>
 
   <section class="library-container" id="library-container"></section>
+  <button class="btn btn-accent quick-import-fab" id="quick-import-btn" title="曲を取り込む">+ ADD FILES</button>
 `;
 
 const accentMap: Record<DeckId, string> = {
@@ -141,6 +142,7 @@ const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as H
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
 const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
 const libraryToggleBtn = document.getElementById('library-toggle-btn') as HTMLButtonElement;
+const quickImportBtn = document.getElementById('quick-import-btn') as HTMLButtonElement;
 const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButtonElement;
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 const guidePanel = document.getElementById('guide-panel') as HTMLElement;
@@ -165,6 +167,15 @@ const applyMixerVisibility = (): void => {
 const applyLibraryVisibility = (): void => {
   root.classList.toggle('library-hidden', !libraryVisible);
   libraryToggleBtn.textContent = libraryVisible ? 'LIBRARY HIDE' : 'LIBRARY SHOW';
+};
+
+const openFileImport = (): void => {
+  if (!libraryVisible) {
+    libraryVisible = true;
+    applyLibraryVisibility();
+  }
+  window.dispatchEvent(new CustomEvent('library-open-picker'));
+  statusBadge.textContent = 'Choose audio files to import';
 };
 
 applyDeckMode();
@@ -468,6 +479,10 @@ mixerToggleBtn.addEventListener('click', () => {
 libraryToggleBtn.addEventListener('click', () => {
   libraryVisible = !libraryVisible;
   applyLibraryVisibility();
+});
+
+quickImportBtn.addEventListener('click', () => {
+  openFileImport();
 });
 
 guideToggleBtn.addEventListener('click', () => {

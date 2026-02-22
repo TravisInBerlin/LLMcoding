@@ -93,6 +93,10 @@ export class LibraryUI {
       if (filePicker.files) void this.addFiles(filePicker.files);
     });
 
+    window.addEventListener('library-open-picker', () => {
+      filePicker.click();
+    });
+
     searchInput.addEventListener('input', () => {
       this.renderTracks(searchInput.value.toLowerCase());
     });
