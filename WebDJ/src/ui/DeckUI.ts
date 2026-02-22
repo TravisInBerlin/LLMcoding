@@ -8,7 +8,6 @@ export class DeckUI {
   private jogAngle = 0;
   private deckSurfaceEl!: HTMLElement;
   private jogEl!: HTMLElement;
-  private tonearmEl!: HTMLElement;
   private vinylTextEl!: HTMLElement;
   private timeEl!: HTMLElement;
   private bpmEl!: HTMLElement;
@@ -71,19 +70,9 @@ export class DeckUI {
             <div class="turntable-shell">
               <div class="platter-rim"></div>
               <div class="jog-wheel" id="jog-${side}">
-                <div class="vinyl-grooves"></div>
-                <div class="vinyl-center">
-                  <div class="vinyl-spindle"></div>
-                  <div class="vinyl-text" id="vinyl-text-${side}">${side}</div>
-                </div>
+                <img src="/assets/vinyl.png" class="vinyl-record-img" alt="Vinyl Record">
+                <div class="vinyl-text" id="vinyl-text-${side}">${side}</div>
                 <div class="vinyl-highlight"></div>
-              </div>
-              <div class="tonearm" id="tonearm-${side}">
-                <div class="tonearm-base"></div>
-                <div class="tonearm-knob"></div>
-                <div class="tonearm-arm"></div>
-                <div class="tonearm-head"></div>
-                <div class="tonearm-needle"></div>
               </div>
             </div>
             <div class="platter-label">DISC</div>
@@ -103,8 +92,8 @@ export class DeckUI {
               <button class="btn btn-loop-toggle btn-muted" id="loop-toggle-${side}" title="Toggle loop">LOOP</button>
               <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="Save loop">SAVE</button>
               ${[1, 2, 4, 8, 16]
-                .map((b) => `<button class="btn btn-auto-loop btn-muted" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`)
-                .join('')}
+        .map((b) => `<button class="btn btn-auto-loop btn-muted" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`)
+        .join('')}
             </div>
 
             <div class="cue-bank-row">
@@ -132,7 +121,6 @@ export class DeckUI {
 
     this.deckSurfaceEl = this.el.querySelector('.deck-surface') as HTMLElement;
     this.jogEl = this.el.querySelector(`#jog-${side}`)!;
-    this.tonearmEl = this.el.querySelector(`#tonearm-${side}`)!;
     this.vinylTextEl = this.el.querySelector(`#vinyl-text-${side}`)!;
     this.timeEl = this.el.querySelector(`#time-${side}`)!;
     this.bpmEl = this.el.querySelector(`#bpm-${side}`)!;
@@ -177,9 +165,17 @@ export class DeckUI {
     this.cueButtons.forEach((btn, i) => {
       btn.addEventListener('click', (e) => {
         const cueId = this.getCueId(i);
+        const exists = this.deck.cuePoints.find((c) => c.id === cueId);
+
         if ((e as MouseEvent).shiftKey) {
-          this.deck.setCuePoint(cueId);
-        } else if (this.deck.cuePoints.find((c) => c.id === cueId)) {
+          if (exists) {
+            // Shift click on an existing cue clears it
+            this.deck.clearCuePoint(cueId);
+          } else {
+            // Shift click on an empty cue sets it
+            this.deck.setCuePoint(cueId);
+          }
+        } else if (exists) {
           this.deck.jumpToCue(cueId);
         } else {
           this.deck.setCuePoint(cueId);
@@ -245,13 +241,11 @@ export class DeckUI {
     this.deck.on('play', () => {
       this.playBtn.textContent = '⏸';
       this.playBtn.classList.add('playing');
-      this.tonearmEl.classList.add('playing');
     });
 
     this.deck.on('pause', () => {
       this.playBtn.textContent = '▶';
       this.playBtn.classList.remove('playing');
-      this.tonearmEl.classList.remove('playing');
     });
 
     this.deck.on('timeupdate', () => {
@@ -325,7 +319,6 @@ export class DeckUI {
     this.jogEl.style.setProperty('--vinyl-hue', `${hue}`);
     this.jogEl.style.setProperty('--vinyl-hue2', `${hue2}`);
     this.jogEl.classList.toggle('loaded', Boolean(title));
-    this.tonearmEl.classList.toggle('loaded', Boolean(title));
     this.vinylTextEl.textContent = title ? title.slice(0, 2).toUpperCase() : this.deck.id;
     this.deckSurfaceEl.style.setProperty('--deck-accent-secondary', `hsl(${hue2} 82% 62%)`);
   }
@@ -373,6 +366,7 @@ export class DeckUI {
 
     this.jogEl.addEventListener('pointerup', stop);
     this.jogEl.addEventListener('pointercancel', stop);
+
   }
 
   private formatTime(seconds: number): string {
