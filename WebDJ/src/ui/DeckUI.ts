@@ -21,6 +21,10 @@ export class DeckUI {
   private keySlider!: HTMLInputElement;
   private keyLabel!: HTMLElement;
   private keyLockBtn!: HTMLButtonElement;
+  private loopInBtn!: HTMLButtonElement;
+  private loopOutBtn!: HTMLButtonElement;
+  private loopToggleBtn!: HTMLButtonElement;
+  private autoLoopButtons = new Map<number, HTMLButtonElement>();
   private cueButtons: HTMLButtonElement[] = [];
   private cueBankButtons: HTMLButtonElement[] = [];
   private cueBank = 0;
@@ -82,38 +86,52 @@ export class DeckUI {
           </div>
 
           <div class="deck-controls-stack">
-            <div class="transport-row">
-              <button class="btn btn-cue" id="cue-btn-${side}" title="Return to cue">CUE</button>
-              <button class="btn btn-play" id="play-btn-${side}" title="Play/Pause">▶</button>
-              <button class="btn btn-mini btn-sync" id="sync-btn-${side}" title="Sync tempo">SYNC</button>
-              <button class="btn btn-mini btn-key" id="key-match-${side}" title="Match key">KEY MATCH</button>
+            <div class="control-group">
+              <div class="control-label">TRANSPORT</div>
+              <div class="transport-row">
+                <button class="btn btn-cue" id="cue-btn-${side}" title="Return to track start cue">CUE</button>
+                <button class="btn btn-play" id="play-btn-${side}" title="Play / Pause">▶</button>
+                <button class="btn btn-mini btn-sync" id="sync-btn-${side}" title="Match BPM to opposite deck">SYNC</button>
+                <button class="btn btn-mini btn-key" id="key-match-${side}" title="Match key to opposite deck">KEY MATCH</button>
+              </div>
             </div>
 
-            <div class="loop-controls">
-              <button class="btn btn-loop btn-muted" id="loop-in-${side}" title="Set loop in">IN</button>
-              <button class="btn btn-loop btn-muted" id="loop-out-${side}" title="Set loop out">OUT</button>
-              <button class="btn btn-loop-toggle btn-muted" id="loop-toggle-${side}" title="Toggle loop">LOOP</button>
-              <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="Save loop">SAVE</button>
-              ${[1, 2, 4, 8, 16]
-        .map((b) => `<button class="btn btn-auto-loop btn-muted" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`)
-        .join('')}
+            <div class="control-group">
+              <div class="control-label">LOOP</div>
+              <div class="loop-controls">
+                <button class="btn btn-loop btn-muted" id="loop-in-${side}" title="Set loop start">IN</button>
+                <button class="btn btn-loop btn-muted" id="loop-out-${side}" title="Set loop end">OUT</button>
+                <button class="btn btn-loop-toggle btn-muted" id="loop-toggle-${side}" title="Enable / disable loop">LOOP</button>
+                <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="Save current loop">SAVE</button>
+                ${[1, 2, 4, 8, 16]
+          .map((b) => `<button class="btn btn-auto-loop btn-muted" id="loop-${side}-${b}" title="${b} beat auto loop (tap again to OFF)">${b}B</button>`)
+          .join('')}
+              </div>
             </div>
 
-            <div class="cue-bank-row">
-              ${Array.from({ length: 4 }, (_, i) => `<button class="btn cue-bank-btn ${i === 0 ? 'active' : ''}" id="cue-bank-${side}-${i}" title="Show cues ${i * 4 + 1}-${i * 4 + 4}">${i * 4 + 1}-${i * 4 + 4}</button>`).join('')}
+            <div class="control-group">
+              <div class="control-label">HOT CUE</div>
+              <div class="cue-bank-row">
+                ${Array.from({ length: 4 }, (_, i) => `<button class="btn cue-bank-btn ${i === 0 ? 'active' : ''}" id="cue-bank-${side}-${i}" title="Show cues ${i * 4 + 1}-${i * 4 + 4}">${i * 4 + 1}-${i * 4 + 4}</button>`).join('')}
+              </div>
+              <div class="cue-points cue-grid" id="cue-grid-${side}">
+                ${Array.from({ length: 4 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Tap: ON/OFF cue point">${i + 1}</button>`).join('')}
+              </div>
+              <div class="deck-hint">Cue pads: tap once ON, tap again OFF</div>
             </div>
-
-            <div class="cue-points cue-grid" id="cue-grid-${side}">
-              ${Array.from({ length: 4 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1} (Shift+Click to set)">${i + 1}</button>`).join('')}
-            </div>
-            <div class="deck-hint">Tap: jump/set cue. Shift+Tap: overwrite</div>
           </div>
 
           <div class="pitch-control">
-            <label class="pitch-label" id="pitch-label-${side}">+0.0%</label>
-            <input type="range" class="pitch-slider" id="pitch-${side}" min="-75" max="75" value="0" orient="vertical" aria-label="Tempo">
-            <label class="pitch-label" id="key-shift-label-${side}">KEY +0</label>
-            <input type="range" class="pitch-slider" id="key-shift-${side}" min="-12" max="12" value="0" orient="vertical" aria-label="Key">
+            <div class="slider-column">
+              <div class="slider-role">TEMPO</div>
+              <label class="pitch-label" id="pitch-label-${side}">+0.0%</label>
+              <input type="range" class="pitch-slider" id="pitch-${side}" min="-75" max="75" value="0" orient="vertical" aria-label="Tempo">
+            </div>
+            <div class="slider-column">
+              <div class="slider-role">KEY SHIFT</div>
+              <label class="pitch-label" id="key-shift-label-${side}">KEY +0</label>
+              <input type="range" class="pitch-slider" id="key-shift-${side}" min="-12" max="12" value="0" orient="vertical" aria-label="Key Shift">
+            </div>
           </div>
         </div>
       </div>
@@ -137,6 +155,12 @@ export class DeckUI {
     this.keySlider = this.el.querySelector(`#key-shift-${side}`)!;
     this.keyLabel = this.el.querySelector(`#key-shift-label-${side}`)!;
     this.keyLockBtn = this.el.querySelector(`#key-lock-${side}`)!;
+    this.loopInBtn = this.el.querySelector(`#loop-in-${side}`)!;
+    this.loopOutBtn = this.el.querySelector(`#loop-out-${side}`)!;
+    this.loopToggleBtn = this.el.querySelector(`#loop-toggle-${side}`)!;
+    this.autoLoopButtons = new Map(
+      [1, 2, 4, 8, 16].map((beats) => [beats, this.el.querySelector(`#loop-${side}-${beats}`) as HTMLButtonElement] as const),
+    );
 
     this.cueButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#hot-cue-${side}-${i}`) as HTMLButtonElement);
     this.cueBankButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#cue-bank-${side}-${i}`) as HTMLButtonElement);
@@ -151,35 +175,27 @@ export class DeckUI {
       this.deck.seek(0);
     });
 
-    this.el.querySelector(`#loop-in-${side}`)!.addEventListener('click', () => this.deck.setLoopIn());
-    this.el.querySelector(`#loop-out-${side}`)!.addEventListener('click', () => this.deck.setLoopOut());
-    this.el.querySelector(`#loop-toggle-${side}`)!.addEventListener('click', () => this.deck.toggleLoop());
+    this.loopInBtn.addEventListener('click', () => this.deck.setLoopIn());
+    this.loopOutBtn.addEventListener('click', () => this.deck.setLoopOut());
+    this.loopToggleBtn.addEventListener('click', () => this.deck.toggleLoop());
 
     this.el.querySelector(`#loop-save-${side}`)!.addEventListener('click', () => {
       this.deck.saveCurrentLoop(0, 4);
     });
 
     for (const beats of [1, 2, 4, 8, 16]) {
-      this.el.querySelector(`#loop-${side}-${beats}`)!.addEventListener('click', () => {
-        this.deck.setAutoLoop(beats);
+      this.autoLoopButtons.get(beats)!.addEventListener('click', () => {
+        this.deck.toggleAutoLoop(beats);
       });
     }
 
     this.cueButtons.forEach((btn, i) => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const cueId = this.getCueId(i);
         const exists = this.deck.cuePoints.find((c) => c.id === cueId);
 
-        if ((e as MouseEvent).shiftKey) {
-          if (exists) {
-            // Shift click on an existing cue clears it
-            this.deck.clearCuePoint(cueId);
-          } else {
-            // Shift click on an empty cue sets it
-            this.deck.setCuePoint(cueId);
-          }
-        } else if (exists) {
-          this.deck.jumpToCue(cueId);
+        if (exists) {
+          this.deck.clearCuePoint(cueId);
         } else {
           this.deck.setCuePoint(cueId);
         }
@@ -237,6 +253,7 @@ export class DeckUI {
     this.deck.on('loaded', () => {
       this.trackEl.textContent = this.deck.trackName;
       this.syncCueState();
+      this.syncLoopState();
       this.updateMeta();
       this.updateVinylStyle();
     });
@@ -265,12 +282,16 @@ export class DeckUI {
 
     this.deck.on('statechange', () => {
       this.syncCueState();
+      this.syncLoopState();
       this.updateMeta();
       this.keyLockBtn.classList.toggle('active', this.deck.keyLock);
+      this.keyLockBtn.setAttribute('aria-pressed', String(this.deck.keyLock));
     });
 
     this.updateCueBankUI();
     this.syncCueState();
+    this.syncLoopState();
+    this.keyLockBtn.setAttribute('aria-pressed', String(this.deck.keyLock));
     this.updateVinylStyle();
   }
 
@@ -294,9 +315,29 @@ export class DeckUI {
       if (cue) {
         btn.classList.add('active');
         btn.style.setProperty('--cue-color', cue.color);
+        btn.setAttribute('aria-pressed', 'true');
       } else {
         btn.classList.remove('active');
+        btn.style.removeProperty('--cue-color');
+        btn.setAttribute('aria-pressed', 'false');
       }
+    });
+  }
+
+  private syncLoopState(): void {
+    const hasLoopIn = this.deck.loopIn >= 0;
+    const hasLoopOut = this.deck.loopOut > this.deck.loopIn;
+    const loopOn = this.deck.loopActive;
+
+    this.loopInBtn.classList.toggle('active', hasLoopIn);
+    this.loopOutBtn.classList.toggle('active', hasLoopOut);
+    this.loopToggleBtn.classList.toggle('active', loopOn);
+    this.loopToggleBtn.setAttribute('aria-pressed', String(loopOn));
+
+    this.autoLoopButtons.forEach((btn, beats) => {
+      const active = loopOn && this.deck.autoLoopBeats === beats;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
     });
   }
 

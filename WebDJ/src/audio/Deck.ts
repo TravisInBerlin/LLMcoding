@@ -101,6 +101,7 @@ export class Deck {
   loopIn = -1;
   loopOut = -1;
   loopActive = false;
+  autoLoopBeats: number | null = null;
   cuePoints: CuePoint[] = [];
   savedLoops: LoopSlot[] = [];
   private _loopTimerId: number | null = null;
@@ -305,6 +306,7 @@ export class Deck {
     this.loopIn = -1;
     this.loopOut = -1;
     this.loopActive = false;
+    this.autoLoopBeats = null;
     this.cuePoints = [];
     this.savedLoops = [];
     this._tempoPercent = 0;
@@ -429,6 +431,7 @@ export class Deck {
   // Loop controls
   setLoopIn(): void {
     this.loopIn = this.currentTime;
+    this.autoLoopBeats = null;
     if (this.loopOut > 0 && this.loopIn < this.loopOut) {
       this.loopActive = true;
     }
@@ -437,6 +440,7 @@ export class Deck {
 
   setLoopOut(): void {
     this.loopOut = this.currentTime;
+    this.autoLoopBeats = null;
     if (this.loopIn >= 0 && this.loopIn < this.loopOut) {
       this.loopActive = true;
     }
@@ -449,11 +453,26 @@ export class Deck {
     this.loopIn = this.currentTime;
     this.loopOut = Math.min(this.duration, this.loopIn + loopLen);
     this.loopActive = this.loopOut > this.loopIn;
+    this.autoLoopBeats = this.loopActive ? safeBeats : null;
     this.emit('statechange');
   }
 
-  toggleLoop(): void {
-    this.loopActive = !this.loopActive;
+  toggleAutoLoop(beats: number): void {
+    const safeBeats = Math.max(1, Math.min(64, beats));
+    if (this.loopActive && this.autoLoopBeats === safeBeats) {
+      this.loopActive = false;
+      this.autoLoopBeats = null;
+      this.emit('statechange');
+      return;
+    }
+    this.setAutoLoop(safeBeats);
+  }
+
+  toggleLoop(force?: boolean): void {
+    this.loopActive = typeof force === 'boolean' ? force : !this.loopActive;
+    if (!this.loopActive) {
+      this.autoLoopBeats = null;
+    }
     this.emit('statechange');
   }
 
@@ -480,6 +499,7 @@ export class Deck {
     this.loopIn = loop.inPoint;
     this.loopOut = loop.outPoint;
     this.loopActive = true;
+    this.autoLoopBeats = null;
     this.seek(loop.inPoint);
     this.emit('statechange');
   }
@@ -521,6 +541,14 @@ export class Deck {
   jumpToCue(id: number): void {
     const cue = this.cuePoints.find((c) => c.id === id);
     if (cue) this.seek(cue.position);
+  }
+
+  clearCuePoint(id: number): void {
+    const index = this.cuePoints.findIndex((c) => c.id === id);
+    if (index >= 0) {
+      this.cuePoints.splice(index, 1);
+      this.emit('statechange');
+    }
   }
 
   syncTo(targetBPM: number): void {

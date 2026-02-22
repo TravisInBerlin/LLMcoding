@@ -100,35 +100,40 @@ export class Waveform {
     this.drawBeatGridHorizontal(w, h);
 
     const mid = h / 2;
+    const baseColor = 'rgba(225, 235, 252, 0.3)';
+    const playedColor = this.accentColor;
+    const centerColor = 'rgba(244, 248, 255, 0.78)';
+    const drawWidth = Math.max(1, Math.ceil(barWidth * 0.78));
+
     for (let i = 0; i < numBars; i++) {
       const val = peaks[i];
-      const barH = val * mid * 0.96;
-      const x = i * barWidth;
+      const barH = val * mid * 0.9;
+      const x = Math.floor(i * barWidth);
+      const isPlayed = i <= progressIndex;
 
-      if (i <= progressIndex) {
-        ctx.fillStyle = this.accentColor;
-      } else {
-        ctx.fillStyle = 'rgba(150, 170, 255, 0.26)';
-      }
+      ctx.fillStyle = isPlayed ? playedColor : baseColor;
+      ctx.globalAlpha = isPlayed ? 0.95 : 1;
+      ctx.fillRect(x, mid - barH, drawWidth, barH * 2);
 
-      ctx.fillRect(x, mid - barH, Math.max(1, barWidth * 0.6), barH * 2);
+      ctx.fillStyle = isPlayed ? '#faffff' : centerColor;
+      ctx.globalAlpha = isPlayed ? 0.86 : 0.52;
+      ctx.fillRect(x, mid - barH * 0.18, drawWidth, barH * 0.36);
     }
 
-    const playheadX = progress * w;
+    ctx.globalAlpha = 1.0;
+
+    const playheadX = Math.floor(progress * w) + 0.5;
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.8;
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur = 7;
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(playheadX, 0);
     ctx.lineTo(playheadX, h);
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
     for (const cue of deck.cuePoints) {
       const cueX = (cue.position / deck.duration) * w;
       ctx.fillStyle = cue.color;
-      ctx.fillRect(cueX - 1, 0, 2, h);
+      ctx.fillRect(Math.floor(cueX), 0, 2, h);
     }
   }
 
@@ -144,35 +149,40 @@ export class Waveform {
     this.drawBeatGridVertical(w, h);
 
     const mid = w / 2;
+    const baseColor = 'rgba(225, 235, 252, 0.3)';
+    const playedColor = this.accentColor;
+    const centerColor = 'rgba(244, 248, 255, 0.78)';
+    const drawHeight = Math.max(1, Math.ceil(barHeight * 0.74));
+
     for (let i = 0; i < numBars; i++) {
       const val = peaks[numBars - i - 1];
-      const halfW = val * mid * 0.92;
-      const y = i * barHeight;
+      const halfW = Math.max(1, val * mid * 0.85);
+      const y = Math.floor(i * barHeight);
+      const isPlayed = numBars - i - 1 <= progressIndex;
 
-      if (numBars - i - 1 <= progressIndex) {
-        ctx.fillStyle = this.accentColor;
-      } else {
-        ctx.fillStyle = 'rgba(150, 170, 255, 0.26)';
-      }
+      ctx.fillStyle = isPlayed ? playedColor : baseColor;
+      ctx.globalAlpha = isPlayed ? 0.95 : 1;
+      ctx.fillRect(mid - halfW, y, halfW * 2, drawHeight);
 
-      ctx.fillRect(mid - halfW, y, halfW * 2, Math.max(1, barHeight * 0.72));
+      ctx.fillStyle = isPlayed ? '#faffff' : centerColor;
+      ctx.globalAlpha = isPlayed ? 0.86 : 0.52;
+      ctx.fillRect(mid - halfW * 0.2, y, halfW * 0.4, drawHeight);
     }
 
-    const playheadY = h - progress * h;
+    ctx.globalAlpha = 1.0;
+
+    const playheadY = Math.floor(h - progress * h) + 0.5;
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.8;
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur = 7;
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, playheadY);
     ctx.lineTo(w, playheadY);
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
     for (const cue of deck.cuePoints) {
       const cueY = h - (cue.position / deck.duration) * h;
       ctx.fillStyle = cue.color;
-      ctx.fillRect(0, cueY - 1, w, 2);
+      ctx.fillRect(0, Math.floor(cueY), w, 2);
     }
   }
 
@@ -221,14 +231,14 @@ export class Waveform {
     const beatInterval = deck.beatInterval;
     if (beatInterval <= 0 || deck.duration <= 0) return;
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = 'rgba(240,246,255,0.16)';
     ctx.lineWidth = 1;
 
     let beat = 0;
     for (let t = 0; t < deck.duration; t += beatInterval) {
       const x = (t / deck.duration) * w;
       const strong = beat % 4 === 0;
-      ctx.globalAlpha = strong ? 0.25 : 0.1;
+      ctx.globalAlpha = strong ? 0.52 : 0.2;
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, h);
@@ -243,14 +253,14 @@ export class Waveform {
     const beatInterval = deck.beatInterval;
     if (beatInterval <= 0 || deck.duration <= 0) return;
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = 'rgba(240,246,255,0.16)';
     ctx.lineWidth = 1;
 
     let beat = 0;
     for (let t = 0; t < deck.duration; t += beatInterval) {
       const y = h - (t / deck.duration) * h;
       const strong = beat % 4 === 0;
-      ctx.globalAlpha = strong ? 0.25 : 0.1;
+      ctx.globalAlpha = strong ? 0.52 : 0.2;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(w, y);
