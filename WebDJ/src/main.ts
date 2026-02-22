@@ -9,6 +9,7 @@ import type { WaveformMode } from './visualizer/Waveform';
 import './style.css';
 
 type TransitionStyle = 'smooth' | 'power' | 'neural';
+let transitionStyle: TransitionStyle = 'smooth';
 
 const engine = new AudioEngine();
 const deckIds: DeckId[] = ['A', 'B', 'C', 'D'];
@@ -130,7 +131,6 @@ let deckMode: 2 | 4 = 2;
 let waveformMode: WaveformMode = 'horizontal';
 let mixerVisible = true;
 let libraryVisible = true;
-let transitionStyle: TransitionStyle = 'smooth';
 
 const deckModeBtn = document.getElementById('deck-mode-btn') as HTMLButtonElement;
 const waveformModeBtn = document.getElementById('waveform-mode-btn') as HTMLButtonElement;
