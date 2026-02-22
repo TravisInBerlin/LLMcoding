@@ -140,6 +140,14 @@ export class MidiController {
     }
   }
 
+  cancelLearn(): void {
+    this.setLearnTarget(null);
+  }
+
+  get isLearning(): boolean {
+    return this.learnTarget !== null;
+  }
+
   private bindPorts(): void {
     if (!this.access) return;
 

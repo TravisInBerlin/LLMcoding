@@ -55,13 +55,26 @@ root.innerHTML = `
         <option value="stemInstB">Learn: Inst B</option>
       </select>
       <button class="btn btn-mini" id="midi-learn-btn">MIDI LEARN</button>
+      <button class="btn btn-mini" id="midi-learn-cancel-btn">LEARN CANCEL</button>
       <button class="btn btn-mini" id="mixer-toggle-btn">MIXER HIDE</button>
+      <button class="btn btn-mini" id="guide-toggle-btn">GUIDE</button>
       <button class="btn btn-mini" id="deck-mode-btn">4 DECK</button>
       <button class="btn btn-mini" id="waveform-mode-btn">WAVE: H</button>
       <button class="btn btn-mini" id="automix-btn">AUTOMIX OFF</button>
       <button class="btn btn-mini" id="record-btn">REC START</button>
     </div>
   </header>
+
+  <section class="quickstart" id="quickstart">
+    <div class="quickstart-title">Quick Start</div>
+    <div class="quickstart-steps">
+      <span>1) Add Filesから曲を読み込み</span>
+      <span>2) A/Bにロードして再生</span>
+      <span>3) SYNC → クロスフェーダーでミックス</span>
+      <span>4) MIDIは CONNECT → LEARN → キャンセル可</span>
+    </div>
+    <button class="btn btn-mini" id="quickstart-close">HIDE GUIDE</button>
+  </section>
 
   <main class="dj-layout">
     <section class="deck-grid" id="deck-grid">
@@ -102,9 +115,14 @@ const automixBtn = document.getElementById('automix-btn') as HTMLButtonElement;
 const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
 const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
 const midiLearnBtn = document.getElementById('midi-learn-btn') as HTMLButtonElement;
+const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as HTMLButtonElement;
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
 const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
+const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButtonElement;
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
+const quickStartEl = document.getElementById('quickstart') as HTMLElement;
+const quickStartCloseBtn = document.getElementById('quickstart-close') as HTMLButtonElement;
+midiLearnCancelBtn.disabled = true;
 
 const applyDeckMode = (): void => {
   root.classList.toggle('mode-2', deckMode === 2);
@@ -129,6 +147,11 @@ applyMixerVisibility();
 if (isIPad) {
   statusBadge.textContent = 'iPad Touch / Low Latency';
 }
+
+if (localStorage.getItem('webdj.quickstart.hidden') === '1') {
+  quickStartEl.style.display = 'none';
+}
+guideToggleBtn.classList.toggle('active', quickStartEl.style.display !== 'none');
 
 // Sync requests
 window.addEventListener(
@@ -323,7 +346,10 @@ const midi = new MidiController(
   },
   (learnMsg) => {
     statusBadge.textContent = learnMsg;
-    midiLearnBtn.classList.toggle('active', learnMsg.startsWith('Learning'));
+    const learning = learnMsg.startsWith('Learning');
+    midiLearnBtn.classList.toggle('active', learning);
+    midiLearnCancelBtn.classList.toggle('active', learning);
+    midiLearnCancelBtn.disabled = !learning;
   },
 );
 
@@ -337,11 +363,36 @@ midiLearnBtn.addEventListener('click', async () => {
   await midi.connect();
   const target = midiLearnTarget.value as MidiLearnTarget;
   midi.setLearnTarget(target);
+  midiLearnCancelBtn.disabled = false;
+});
+
+midiLearnCancelBtn.addEventListener('click', () => {
+  midi.cancelLearn();
+  statusBadge.textContent = 'MIDI Learn canceled';
 });
 
 mixerToggleBtn.addEventListener('click', () => {
   mixerVisible = !mixerVisible;
   applyMixerVisibility();
+});
+
+quickStartCloseBtn.addEventListener('click', () => {
+  quickStartEl.style.display = 'none';
+  localStorage.setItem('webdj.quickstart.hidden', '1');
+  guideToggleBtn.classList.remove('active');
+});
+
+guideToggleBtn.addEventListener('click', () => {
+  const visible = quickStartEl.style.display !== 'none';
+  if (visible) {
+    quickStartEl.style.display = 'none';
+    localStorage.setItem('webdj.quickstart.hidden', '1');
+    guideToggleBtn.classList.remove('active');
+  } else {
+    quickStartEl.style.display = '';
+    localStorage.removeItem('webdj.quickstart.hidden');
+    guideToggleBtn.classList.add('active');
+  }
 });
 
 // Recording

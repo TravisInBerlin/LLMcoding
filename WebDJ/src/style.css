@@ -42,7 +42,7 @@ body {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr minmax(170px, 230px);
+  grid-template-rows: auto auto 1fr minmax(170px, 230px);
   gap: 10px;
   padding: 10px;
   padding-top: calc(10px + env(safe-area-inset-top, 0px));
@@ -92,6 +92,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .midi-learn-select {
@@ -104,6 +106,31 @@ body {
   min-height: 32px;
 }
 
+.quickstart {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, rgba(20, 31, 60, 0.8), rgba(8, 13, 28, 0.8));
+  padding: 8px 12px;
+}
+
+.quickstart-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  color: #b9c8ff;
+}
+
+.quickstart-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
 .dj-layout {
   min-height: 0;
   display: grid;
@@ -113,6 +140,7 @@ body {
 
 .mixer-hidden .dj-layout {
   grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
 }
 
 .mixer-hidden .mixer-container {
@@ -148,6 +176,19 @@ body {
 .mode-4 .deck-grid {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
+}
+
+.mode-4 .dj-layout {
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(360px, 1fr) minmax(210px, auto);
+}
+
+.mode-4 .mixer-container {
+  min-height: 210px;
+}
+
+.mode-4 .mixer-channels {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
 }
 
 .deck-panel {
@@ -378,6 +419,11 @@ body {
 .btn:hover {
   border-color: var(--line-strong);
   background: linear-gradient(180deg, rgba(191, 213, 255, 0.22), rgba(112, 145, 218, 0.12));
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .btn.active {
@@ -675,7 +721,7 @@ body {
 @media (max-width: 1200px) {
   #app {
     overflow: auto;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto auto auto;
     height: auto;
     min-height: 100%;
   }
@@ -696,9 +742,9 @@ body {
     display: none;
   }
 
-  .header-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
+  .quickstart {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .search-input {
