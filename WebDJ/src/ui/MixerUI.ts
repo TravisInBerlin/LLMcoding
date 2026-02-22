@@ -11,6 +11,13 @@ export class MixerUI {
   private centerTimeEls = new Map<DeckId, HTMLElement>();
   private channelBpmEls = new Map<DeckId, HTMLElement>();
   private volumeValueEls = new Map<DeckId, HTMLElement>();
+  private volumeSliderEls = new Map<DeckId, HTMLInputElement>();
+  private muteButtons = new Map<DeckId, HTMLButtonElement>();
+  private soloButtons = new Map<DeckId, HTMLButtonElement>();
+  private mutedDecks = new Set<DeckId>();
+  private mutedSavedVolume = new Map<DeckId, number>();
+  private soloDeck: DeckId | null = null;
+  private soloSavedVolumes = new Map<DeckId, number>();
 
   constructor(container: HTMLElement, decks: Deck[], crossfader: Crossfader) {
     this.decks = decks;
@@ -79,18 +86,22 @@ export class MixerUI {
                     <button class="btn btn-neural-fx" id="nfx-vocal-echo-${deck.id}">VOCAL ECHO</button>
                     <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
                   </div>
+                  <div class="channel-tools">
+                    <button class="btn btn-mini btn-muted" id="mute-${deck.id}" title="Mute channel output">MUTE</button>
+                    <button class="btn btn-mini btn-muted" id="solo-${deck.id}" title="Solo this channel">SOLO</button>
+                    <button class="btn btn-mini btn-muted" id="reset-${deck.id}" title="Reset EQ/FX/Stem/Volume">RESET</button>
+                  </div>
 
                   <div class="meter-fader-stack">
                     <div class="meter-stack">
                       <span class="meter-label" title="Output level meter">VU</span>
-                      <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="86" title="Output meter"></canvas>
+                      <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="84" title="Output meter"></canvas>
                     </div>
                     <div class="fader-stack">
                       <span class="meter-label" title="Channel volume fader">VOL</span>
                       <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical" title="Channel volume">
                       <span class="meter-value" id="vol-value-${deck.id}">80%</span>
                     </div>
-                    <div class="meter-note">VU=出力レベル / VOL=チャンネル音量</div>
                   </div>
                 </div>
               </div>
@@ -113,6 +124,9 @@ export class MixerUI {
       this.vuMap.set(deck.id, { canvas, ctx });
       this.channelBpmEls.set(deck.id, this.el.querySelector(`#chan-bpm-${deck.id}`) as HTMLElement);
       this.volumeValueEls.set(deck.id, this.el.querySelector(`#vol-value-${deck.id}`) as HTMLElement);
+      this.volumeSliderEls.set(deck.id, this.el.querySelector(`#vol-${deck.id}`) as HTMLInputElement);
+      this.muteButtons.set(deck.id, this.el.querySelector(`#mute-${deck.id}`) as HTMLButtonElement);
+      this.soloButtons.set(deck.id, this.el.querySelector(`#solo-${deck.id}`) as HTMLButtonElement);
     });
 
     (['A', 'B'] as DeckId[]).forEach((id) => {
@@ -134,6 +148,7 @@ export class MixerUI {
       this.bindFX(deck);
       this.bindStems(deck);
       this.bindNeuralFX(deck);
+      this.bindChannelTools(deck);
     });
   }
 
@@ -178,20 +193,24 @@ export class MixerUI {
   }
 
   private bindVolume(deck: Deck): void {
-    const slider = this.el.querySelector(`#vol-${deck.id}`) as HTMLInputElement;
+    const slider = this.volumeSliderEls.get(deck.id)!;
     const valueEl = this.volumeValueEls.get(deck.id);
-    const apply = (value: number): void => {
-      const clamped = Math.max(0, Math.min(100, value));
-      deck.volume = clamped / 100;
-      if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
-    };
 
     slider.addEventListener('input', () => {
-      apply(parseFloat(slider.value));
+      if (this.soloDeck && this.soloDeck !== deck.id) {
+        this.setChannelVolume(deck.id, 0);
+        return;
+      }
+      if (this.mutedDecks.has(deck.id)) {
+        this.mutedDecks.delete(deck.id);
+        this.muteButtons.get(deck.id)?.classList.remove('active');
+      }
+      this.setChannelVolume(deck.id, parseFloat(slider.value));
     });
 
     slider.value = '80';
-    apply(80);
+    this.setChannelVolume(deck.id, 80);
+    if (valueEl) valueEl.textContent = '80%';
   }
 
   private bindEQ(deck: Deck): void {
@@ -415,6 +434,118 @@ export class MixerUI {
     });
   }
 
+  private bindChannelTools(deck: Deck): void {
+    const muteBtn = this.muteButtons.get(deck.id);
+    const soloBtn = this.soloButtons.get(deck.id);
+    const resetBtn = this.el.querySelector(`#reset-${deck.id}`) as HTMLButtonElement | null;
+    if (!muteBtn || !soloBtn || !resetBtn) return;
+
+    muteBtn.addEventListener('click', () => {
+      this.toggleMute(deck.id);
+    });
+
+    soloBtn.addEventListener('click', () => {
+      this.toggleSolo(deck.id);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      this.resetChannel(deck.id);
+    });
+  }
+
+  private resetChannel(deckId: DeckId): void {
+    const ids = [
+      `eq-hi-${deckId}`,
+      `eq-mid-${deckId}`,
+      `eq-lo-${deckId}`,
+      `filter-${deckId}`,
+      `stem-drums-${deckId}`,
+      `stem-instruments-${deckId}`,
+      `stem-vocals-${deckId}`,
+      `fx-echo-${deckId}`,
+      `fx-reverb-${deckId}`,
+      `fx-filter-${deckId}`,
+    ];
+    ids.forEach((id) => {
+      const el = this.el.querySelector(`#${id}`) as HTMLElement | null;
+      el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    });
+
+    const vocalBtn = this.el.querySelector(`#nfx-vocal-echo-${deckId}`) as HTMLButtonElement | null;
+    const drumBtn = this.el.querySelector(`#nfx-drum-filter-${deckId}`) as HTMLButtonElement | null;
+    if (vocalBtn?.classList.contains('active')) vocalBtn.click();
+    if (drumBtn?.classList.contains('active')) drumBtn.click();
+
+    if (this.mutedDecks.has(deckId)) {
+      this.toggleMute(deckId);
+    }
+    if (this.soloDeck === deckId) {
+      this.toggleSolo(deckId);
+    }
+
+    this.setChannelVolume(deckId, 80);
+  }
+
+  private toggleMute(deckId: DeckId): void {
+    if (this.soloDeck === deckId) {
+      this.toggleSolo(deckId);
+    }
+
+    if (this.mutedDecks.has(deckId)) {
+      this.mutedDecks.delete(deckId);
+      const restore = this.mutedSavedVolume.get(deckId) ?? 80;
+      this.setChannelVolume(deckId, restore);
+      this.muteButtons.get(deckId)?.classList.remove('active');
+      return;
+    }
+
+    this.mutedDecks.add(deckId);
+    this.mutedSavedVolume.set(deckId, this.getChannelVolume(deckId));
+    this.setChannelVolume(deckId, 0);
+    this.muteButtons.get(deckId)?.classList.add('active');
+  }
+
+  private toggleSolo(deckId: DeckId): void {
+    if (this.soloDeck === deckId) {
+      this.soloDeck = null;
+      this.decks.forEach((d) => {
+        const restore = this.soloSavedVolumes.get(d.id) ?? 80;
+        this.setChannelVolume(d.id, this.mutedDecks.has(d.id) ? 0 : restore);
+        this.soloButtons.get(d.id)?.classList.remove('active');
+      });
+      this.soloSavedVolumes.clear();
+      return;
+    }
+
+    this.soloSavedVolumes.clear();
+    this.decks.forEach((d) => {
+      this.soloSavedVolumes.set(d.id, this.getChannelVolume(d.id));
+      const isTarget = d.id === deckId;
+      this.setChannelVolume(d.id, isTarget ? this.getChannelVolume(d.id) : 0);
+      this.soloButtons.get(d.id)?.classList.toggle('active', isTarget);
+    });
+    this.soloDeck = deckId;
+  }
+
+  private setChannelVolume(deckId: DeckId, value: number): void {
+    const deck = this.decks.find((d) => d.id === deckId);
+    const slider = this.volumeSliderEls.get(deckId);
+    const valueEl = this.volumeValueEls.get(deckId);
+    if (!deck || !slider) return;
+
+    const clamped = this.clamp(value, 0, 100);
+    deck.volume = clamped / 100;
+    slider.value = `${Math.round(clamped)}`;
+    if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
+  }
+
+  private getChannelVolume(deckId: DeckId): number {
+    const slider = this.volumeSliderEls.get(deckId);
+    if (slider) return parseFloat(slider.value) || 0;
+    const deck = this.decks.find((d) => d.id === deckId);
+    return deck ? deck.volume * 100 : 0;
+  }
+
   private startVU(): void {
     const buffers = new Map<string, Uint8Array<ArrayBuffer>>();
     this.decks.forEach((deck) => {
@@ -435,8 +566,8 @@ export class MixerUI {
   }
 
   private drawVU(ctx: CanvasRenderingContext2D, data: Uint8Array<ArrayBuffer>): void {
-    const w = 24;
-    const h = 86;
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
     ctx.clearRect(0, 0, w, h);
 
     let sum = 0;

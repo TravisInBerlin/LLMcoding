@@ -579,7 +579,7 @@ body {
 
 .volume-fader {
   width: 10px;
-  height: 72px;
+  height: var(--meter-height, 84px);
 }
 
 .volume-fader::-webkit-slider-thumb,
@@ -857,44 +857,66 @@ body {
   display: grid;
   justify-items: center;
   text-align: center;
-  gap: 3px;
-  font-size: 9px;
-  color: var(--text-dim);
+  gap: 4px;
+  font-size: 10px;
+  color: rgba(223, 232, 248, 0.86);
 }
 
 .mixer-knob {
   --knob-angle: 0deg;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  border: 1px solid rgba(217, 228, 249, 0.24);
+  border: 1px solid rgba(236, 243, 255, 0.34);
   background:
-    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.2), rgba(93, 109, 143, 0.34) 36%, rgba(12, 18, 28, 0.96) 72%),
-    linear-gradient(180deg, rgba(64, 78, 105, 0.32), rgba(11, 16, 26, 0.88));
-  box-shadow: inset 0 0 0 1px rgba(8, 12, 20, 0.82), inset 0 1px 5px rgba(255, 255, 255, 0.08), 0 4px 10px rgba(0, 0, 0, 0.26);
+    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.36), rgba(177, 198, 241, 0.16) 24%, rgba(52, 69, 96, 0.6) 42%, rgba(10, 14, 23, 0.98) 74%),
+    conic-gradient(from 0deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.12));
+  box-shadow: inset 0 0 0 1px rgba(6, 10, 17, 0.85), inset 0 1px 8px rgba(255, 255, 255, 0.12), 0 6px 12px rgba(0, 0, 0, 0.34);
   position: relative;
   cursor: ns-resize;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.mixer-knob:hover {
+  transform: translateY(-1px);
+}
+
+.mixer-knob:active {
+  transform: scale(0.98);
 }
 
 .mixer-knob::before {
   content: '';
   position: absolute;
-  inset: 4px;
+  inset: 3px;
   border-radius: 50%;
-  border: 1px solid rgba(205, 218, 244, 0.16);
+  border: 1px solid rgba(205, 218, 244, 0.24);
+}
+
+.mixer-knob::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 35% 35%, #f9fcff, #b2bfd8 64%, #7d89a1);
+  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
 .mixer-knob-indicator {
   position: absolute;
   left: 50%;
-  top: 4px;
+  top: 3px;
   width: 3px;
-  height: 10px;
+  height: 11px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #f3f8ff, #8cb3ff);
+  background: linear-gradient(180deg, #ffffff, #b9d3ff);
   transform: translateX(-50%) rotate(var(--knob-angle));
-  transform-origin: 50% 11px;
-  box-shadow: 0 0 6px rgba(151, 190, 255, 0.3);
+  transform-origin: 50% 14px;
+  box-shadow: 0 0 8px rgba(173, 205, 255, 0.36);
   pointer-events: none;
 }
 
@@ -905,10 +927,10 @@ body {
 
 .channel-foot {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
   align-items: start;
-  gap: 6px;
-  padding-top: 2px;
+  gap: 5px;
+  padding-top: 0;
 }
 
 .neural-fx-row {
@@ -918,45 +940,58 @@ body {
   align-content: start;
 }
 
+.channel-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.channel-tools .btn {
+  min-height: 24px;
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.channel-tools .btn.active {
+  border-color: rgba(173, 235, 200, 0.88);
+  background: linear-gradient(180deg, rgba(76, 192, 141, 0.46), rgba(30, 102, 76, 0.42));
+  color: #eefef6;
+}
+
 .meter-fader-stack {
+  --meter-height: 84px;
   display: grid;
   grid-template-columns: auto auto;
-  grid-template-rows: auto auto;
-  align-items: end;
-  gap: 6px;
+  justify-content: end;
+  align-items: start;
+  gap: 8px;
+  margin-top: 2px;
 }
 
 .meter-stack,
 .fader-stack {
   display: grid;
   justify-items: center;
-  align-content: start;
+  grid-template-rows: auto var(--meter-height) auto;
+  align-content: stretch;
   gap: 3px;
 }
 
-.meter-note {
-  grid-column: 1 / -1;
-  font-size: 9px;
-  color: rgba(217, 228, 246, 0.72);
-  text-align: center;
-  letter-spacing: 0.3px;
-}
-
 .meter-label {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.6px;
-  color: rgba(220, 231, 248, 0.72);
+  color: rgba(236, 244, 255, 0.82);
 }
 
 .meter-value {
-  font-size: 9px;
+  font-size: 10px;
   color: rgba(232, 241, 255, 0.86);
   font-variant-numeric: tabular-nums;
 }
 
 .vu-meter {
   width: 20px;
-  height: 72px;
+  height: var(--meter-height);
   border: 1px solid var(--line);
   border-radius: 5px;
 }
@@ -1362,6 +1397,15 @@ body {
 .touch-mode .deck-knob {
   width: 62px;
   height: 62px;
+}
+
+.touch-mode .mixer-knob {
+  width: 38px;
+  height: 38px;
+}
+
+.touch-mode .channel-tools .btn {
+  min-height: 28px;
 }
 
 .touch-mode .volume-fader {
