@@ -1543,6 +1543,20 @@ body {
   padding: 8px;
 }
 
+.library-view {
+  display: none;
+  min-height: 0;
+  height: 100%;
+}
+
+.library-view.active {
+  display: block;
+}
+
+#view-library {
+  position: relative;
+}
+
 .track-grid {
   min-height: 0;
   height: 100%;
@@ -1673,6 +1687,134 @@ body {
 .drop-subcopy {
   font-size: 12px;
   color: var(--text-dim);
+}
+
+.browser-list {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding-right: 2px;
+}
+
+.browser-row,
+.playlist-card,
+.neural-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, rgba(24, 31, 43, 0.88), rgba(11, 16, 24, 0.95));
+  padding: 8px;
+}
+
+.browser-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.browser-main {
+  min-width: 0;
+}
+
+.browser-title {
+  font-size: 14px;
+  color: #eef4ff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.browser-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.browser-empty {
+  min-height: 120px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 4px;
+  color: var(--text-dim);
+  padding: 12px;
+}
+
+.browser-empty strong {
+  color: #f2f6ff;
+}
+
+.playlist-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #eef4ff;
+}
+
+.playlist-head span {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.browser-chip-row {
+  margin-top: 7px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.browser-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.browser-chip.muted {
+  color: var(--text-faint);
+}
+
+.neural-bars {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.neural-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.neural-meter {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(205, 217, 243, 0.14);
+  border: 1px solid rgba(214, 224, 245, 0.12);
+  overflow: hidden;
+}
+
+.neural-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #61cdff, #7fa0ff, #f17fc8);
 }
 
 @media (max-width: 1700px) {

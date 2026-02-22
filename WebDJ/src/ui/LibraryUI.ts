@@ -11,19 +11,41 @@ interface TrackItem {
   hue: number;
 }
 
+type LibraryView = 'library' | 'history' | 'playlists' | 'my-files' | 'downloaded' | 'neural-mix';
+
+interface HistoryItem {
+  deckId: DeckId;
+  trackName: string;
+  bpm: number;
+  key: string;
+  playedAt: number;
+  trackIndex: number;
+}
+
 export class LibraryUI {
   private decks: Deck[];
   private el: HTMLElement;
   private tracks: TrackItem[] = [];
+  private history: HistoryItem[] = [];
+  private searchQuery = '';
+
   private trackListEl!: HTMLElement;
   private matchEl!: HTMLElement;
   private dropZoneEl!: HTMLElement;
+  private searchInputEl!: HTMLInputElement;
+  private historyListEl!: HTMLElement;
+  private playlistsListEl!: HTMLElement;
+  private myFilesListEl!: HTMLElement;
+  private downloadedListEl!: HTMLElement;
+  private neuralMixListEl!: HTMLElement;
+  private sidebarButtons = new Map<LibraryView, HTMLButtonElement>();
 
   constructor(container: HTMLElement, decks: Deck[]) {
     this.decks = decks;
     this.el = container;
     this.render();
     this.bind();
+    this.renderAllViews();
   }
 
   async importFiles(fileList: FileList): Promise<void> {
@@ -47,22 +69,44 @@ export class LibraryUI {
 
         <div class="library-body">
           <aside class="library-sidebar">
-            <button class="sidebar-item active">Library</button>
-            <button class="sidebar-item">History</button>
-            <button class="sidebar-item">Playlists</button>
-            <button class="sidebar-item">My Files</button>
-            <button class="sidebar-item">Downloaded</button>
-            <button class="sidebar-item">Neural Mix</button>
+            <button class="sidebar-item active" data-view="library">Library</button>
+            <button class="sidebar-item" data-view="history">History</button>
+            <button class="sidebar-item" data-view="playlists">Playlists</button>
+            <button class="sidebar-item" data-view="my-files">My Files</button>
+            <button class="sidebar-item" data-view="downloaded">Downloaded</button>
+            <button class="sidebar-item" data-view="neural-mix">Neural Mix</button>
           </aside>
 
           <div class="library-content">
-            <div class="track-grid" id="track-list"></div>
-            <div class="drop-zone" id="drop-zone">
-              <div class="drop-zone-inner">
-                <span class="drop-copy">Drop audio files here</span>
-                <span class="drop-subcopy">Supports iPad Files / local storage / drag & drop</span>
+            <section class="library-view active" id="view-library">
+              <div class="track-grid" id="track-list"></div>
+              <div class="drop-zone" id="drop-zone">
+                <div class="drop-zone-inner">
+                  <span class="drop-copy">Drop audio files here</span>
+                  <span class="drop-subcopy">Supports iPad Files / local storage / drag & drop</span>
+                </div>
               </div>
-            </div>
+            </section>
+
+            <section class="library-view" id="view-history">
+              <div class="browser-list" id="history-list"></div>
+            </section>
+
+            <section class="library-view" id="view-playlists">
+              <div class="browser-list" id="playlists-list"></div>
+            </section>
+
+            <section class="library-view" id="view-my-files">
+              <div class="browser-list" id="my-files-list"></div>
+            </section>
+
+            <section class="library-view" id="view-downloaded">
+              <div class="browser-list" id="downloaded-list"></div>
+            </section>
+
+            <section class="library-view" id="view-neural-mix">
+              <div class="browser-list" id="neural-mix-list"></div>
+            </section>
           </div>
         </div>
       </div>
@@ -71,11 +115,21 @@ export class LibraryUI {
     this.trackListEl = this.el.querySelector('#track-list')!;
     this.matchEl = this.el.querySelector('#library-match')!;
     this.dropZoneEl = this.el.querySelector('#drop-zone')!;
+    this.searchInputEl = this.el.querySelector('#search-input') as HTMLInputElement;
+    this.historyListEl = this.el.querySelector('#history-list')!;
+    this.playlistsListEl = this.el.querySelector('#playlists-list')!;
+    this.myFilesListEl = this.el.querySelector('#my-files-list')!;
+    this.downloadedListEl = this.el.querySelector('#downloaded-list')!;
+    this.neuralMixListEl = this.el.querySelector('#neural-mix-list')!;
+
+    this.el.querySelectorAll<HTMLButtonElement>('.sidebar-item[data-view]').forEach((btn) => {
+      const view = btn.dataset.view as LibraryView;
+      this.sidebarButtons.set(view, btn);
+    });
   }
 
   private bind(): void {
     const filePicker = this.el.querySelector('#file-picker') as HTMLInputElement;
-    const searchInput = this.el.querySelector('#search-input') as HTMLInputElement;
 
     this.dropZoneEl.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -101,22 +155,56 @@ export class LibraryUI {
       filePicker.click();
     });
 
-    searchInput.addEventListener('input', () => {
-      this.renderTracks(searchInput.value.toLowerCase());
+    this.searchInputEl.addEventListener('input', () => {
+      this.searchQuery = this.searchInputEl.value.trim().toLowerCase();
+      this.renderAllViews();
     });
+
+    this.sidebarButtons.forEach((btn, view) => {
+      btn.addEventListener('click', () => this.switchView(view));
+    });
+
+    this.historyListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
+    this.myFilesListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
+    this.downloadedListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
+    this.trackListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
 
     const updateMatch = () => this.renderMatchSuggestions();
     this.decks.forEach((deck) => {
-      deck.on('loaded', updateMatch);
+      deck.on('loaded', () => {
+        updateMatch();
+        this.pushHistory(deck);
+        this.renderHistory();
+        this.renderNeuralMix();
+      });
       deck.on('play', updateMatch);
       deck.on('bpm', updateMatch);
+      deck.on('statechange', () => this.renderNeuralMix());
     });
+  }
+
+  private switchView(view: LibraryView): void {
+    this.sidebarButtons.forEach((btn, key) => btn.classList.toggle('active', key === view));
+
+    this.el.querySelectorAll<HTMLElement>('.library-view').forEach((panel) => {
+      const isActive = panel.id === `view-${view}`;
+      panel.classList.toggle('active', isActive);
+    });
+
+    const searchable = view === 'library' || view === 'my-files' || view === 'downloaded';
+    this.searchInputEl.disabled = !searchable;
+    this.searchInputEl.placeholder = searchable ? 'Search tracks...' : 'Search unavailable in this tab';
   }
 
   private async addFiles(fileList: FileList): Promise<void> {
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       if (!file.type.startsWith('audio/')) continue;
+      const exists = this.tracks.some(
+        (t) => t.file.name === file.name && t.file.size === file.size && t.file.lastModified === file.lastModified,
+      );
+      if (exists) continue;
+
       const analysis = await this.analyzeTrack(file);
       const hue = (this.tracks.length * 47 + file.name.length * 13) % 360;
       this.tracks.push({
@@ -130,9 +218,261 @@ export class LibraryUI {
       });
     }
 
-    this.renderTracks();
+    this.renderAllViews();
     this.renderMatchSuggestions();
+  }
+
+  private renderAllViews(): void {
+    this.renderTracks(this.searchQuery);
+    this.renderHistory();
+    this.renderPlaylists();
+    this.renderMyFiles();
+    this.renderDownloaded();
+    this.renderNeuralMix();
     this.dropZoneEl.classList.toggle('hidden', this.tracks.length > 0);
+  }
+
+  private renderTracks(filter = ''): void {
+    const indices = this.filteredTrackIndices(filter);
+    this.trackListEl.innerHTML = this.renderTrackCards(indices);
+  }
+
+  private renderHistory(): void {
+    if (this.history.length === 0) {
+      this.historyListEl.innerHTML = this.emptyState('No history yet', 'Load tracks into decks to populate play history.');
+      return;
+    }
+
+    this.historyListEl.innerHTML = this.history
+      .map((entry) => {
+        const title = this.escapeHtml(entry.trackName);
+        const detail = `${entry.bpm > 0 ? entry.bpm.toFixed(1) : '--'} BPM • ${this.escapeHtml(entry.key)} • ${this.formatAgo(entry.playedAt)}`;
+        return `
+          <article class="browser-row">
+            <div class="browser-main">
+              <div class="browser-title">${title}</div>
+              <div class="browser-meta">Deck ${entry.deckId} • ${detail}</div>
+            </div>
+            <div class="browser-actions">
+              ${this.renderDeckLoadButtons(entry.trackIndex, entry.trackIndex < 0)}
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+  }
+
+  private renderPlaylists(): void {
+    if (this.tracks.length === 0) {
+      this.playlistsListEl.innerHTML = this.emptyState('No playlists yet', 'Add tracks first and smart playlists appear here.');
+      return;
+    }
+
+    const warmup = this.tracks.filter((t) => t.bpm < 110).slice(0, 6);
+    const groove = this.tracks.filter((t) => t.bpm >= 110 && t.bpm < 124).slice(0, 6);
+    const peak = this.tracks.filter((t) => t.bpm >= 124).slice(0, 6);
+
+    const playlists = [
+      { name: 'Warmup Flow', tracks: warmup, description: 'Low BPM opening blend' },
+      { name: 'Main Groove', tracks: groove, description: 'Mid-tempo dance set' },
+      { name: 'Peak Time', tracks: peak, description: 'High energy prime-time tracks' },
+    ];
+
+    this.playlistsListEl.innerHTML = playlists
+      .map((pl) => {
+        const samples = pl.tracks.map((t) => `<span class="browser-chip">${this.escapeHtml(t.name)}</span>`).join('');
+        return `
+          <article class="playlist-card">
+            <div class="playlist-head">
+              <strong>${pl.name}</strong>
+              <span>${pl.tracks.length} tracks</span>
+            </div>
+            <div class="browser-meta">${pl.description}</div>
+            <div class="browser-chip-row">${samples || '<span class="browser-chip muted">No matching tracks</span>'}</div>
+          </article>
+        `;
+      })
+      .join('');
+  }
+
+  private renderMyFiles(): void {
+    const indices = this.filteredTrackIndices(this.searchQuery);
+    if (indices.length === 0) {
+      this.myFilesListEl.innerHTML = this.emptyState('No files found', 'Import files or clear the search filter.');
+      return;
+    }
+
+    this.myFilesListEl.innerHTML = indices
+      .map((idx) => {
+        const track = this.tracks[idx];
+        return `
+          <article class="browser-row">
+            <div class="browser-main">
+              <div class="browser-title">${this.escapeHtml(track.name)}</div>
+              <div class="browser-meta">${track.bpm.toFixed(1)} BPM • ${this.escapeHtml(track.key)} • ${track.size}</div>
+            </div>
+            <div class="browser-actions">
+              ${this.renderDeckLoadButtons(idx)}
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+  }
+
+  private renderDownloaded(): void {
+    const indices = this.filteredTrackIndices(this.searchQuery).slice().reverse();
+    if (indices.length === 0) {
+      this.downloadedListEl.innerHTML = this.emptyState('No downloaded cache', 'Imported tracks are shown here as offline-ready items.');
+      return;
+    }
+
+    this.downloadedListEl.innerHTML = indices
+      .map((idx) => {
+        const track = this.tracks[idx];
+        return `
+          <article class="browser-row">
+            <div class="browser-main">
+              <div class="browser-title">${this.escapeHtml(track.name)}</div>
+              <div class="browser-meta">Cached • ${track.size} • EN ${Math.round(track.energy * 100)}</div>
+            </div>
+            <div class="browser-actions">
+              ${this.renderDeckLoadButtons(idx)}
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+  }
+
+  private renderNeuralMix(): void {
+    this.neuralMixListEl.innerHTML = this.decks
+      .map((deck) => {
+        const mode =
+          deck.stemMode === 'analyzing'
+            ? `Analyzing ${Math.round(deck.separationProgress * 100)}%`
+            : deck.stemMode === 'none'
+              ? 'Unavailable'
+              : deck.stemMode.toUpperCase();
+        const title = this.escapeHtml(deck.trackName || `Deck ${deck.id} empty`);
+        return `
+          <article class="neural-card">
+            <div class="playlist-head">
+              <strong>Deck ${deck.id}</strong>
+              <span>${mode}</span>
+            </div>
+            <div class="browser-title">${title}</div>
+            <div class="neural-bars">
+              ${this.renderStemBar('Drums', deck.getStemLevel('drums'))}
+              ${this.renderStemBar('Inst', deck.getStemLevel('instruments'))}
+              ${this.renderStemBar('Vocals', deck.getStemLevel('vocals'))}
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+  }
+
+  private renderStemBar(label: string, level: number): string {
+    const pct = Math.round(level * 100);
+    return `
+      <div class="neural-row">
+        <span>${label}</span>
+        <div class="neural-meter"><i style="width:${pct}%"></i></div>
+        <span>${pct}%</span>
+      </div>
+    `;
+  }
+
+  private pushHistory(deck: Deck): void {
+    if (!deck.trackName) return;
+    const now = Date.now();
+    const index = this.tracks.findIndex((track) => track.name === deck.trackName);
+    const previous = this.history[0];
+    if (previous && previous.deckId === deck.id && previous.trackName === deck.trackName && now - previous.playedAt < 1500) return;
+
+    this.history.unshift({
+      deckId: deck.id,
+      trackName: deck.trackName,
+      bpm: deck.bpm,
+      key: deck.musicalKey,
+      playedAt: now,
+      trackIndex: index,
+    });
+
+    if (this.history.length > 60) this.history.length = 60;
+  }
+
+  private handleLoadButtonClick(e: Event): void {
+    const target = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-load-deck][data-track-index]');
+    if (!target) return;
+
+    const idx = parseInt(target.dataset.trackIndex || '-1', 10);
+    const deckId = target.dataset.loadDeck as DeckId;
+    const deck = this.decks.find((d) => d.id === deckId);
+    if (!deck || idx < 0 || !this.tracks[idx]) return;
+    void deck.loadFile(this.tracks[idx].file);
+  }
+
+  private filteredTrackIndices(filter = ''): number[] {
+    const query = filter.trim().toLowerCase();
+    const indices: number[] = [];
+    for (let i = 0; i < this.tracks.length; i++) {
+      const track = this.tracks[i];
+      if (!query || track.name.toLowerCase().includes(query)) indices.push(i);
+    }
+    return indices;
+  }
+
+  private renderTrackCards(indices: number[]): string {
+    return indices
+      .map((idx) => {
+        const track = this.tracks[idx];
+        const title = this.escapeHtml(track.name);
+        return `
+          <div class="track-card">
+            <div class="track-art" style="--track-hue:${track.hue}">
+              <span class="track-art-letter">${title.charAt(0) || '♪'}</span>
+            </div>
+            <div class="track-info">
+              <div class="track-name" title="${title}">${title}</div>
+              <div class="track-meta">${track.bpm.toFixed(1)} BPM • ${track.key} • EN ${Math.round(track.energy * 100)} • ${track.size}</div>
+            </div>
+            <div class="track-load-row">
+              ${this.renderDeckLoadButtons(idx)}
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  private renderDeckLoadButtons(trackIndex: number, disabled = false): string {
+    return this.decks
+      .map((deck) => {
+        const attrs = disabled ? 'disabled' : `data-load-deck="${deck.id}" data-track-index="${trackIndex}"`;
+        return `<button class="btn btn-load-${deck.id.toLowerCase()}" ${attrs}>${deck.id}</button>`;
+      })
+      .join('');
+  }
+
+  private emptyState(title: string, copy: string): string {
+    return `
+      <div class="browser-empty">
+        <strong>${this.escapeHtml(title)}</strong>
+        <span>${this.escapeHtml(copy)}</span>
+      </div>
+    `;
+  }
+
+  private formatAgo(when: number): string {
+    const sec = Math.max(1, Math.floor((Date.now() - when) / 1000));
+    if (sec < 60) return `${sec}s ago`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hour = Math.floor(min / 60);
+    if (hour < 24) return `${hour}h ago`;
+    return `${Math.floor(hour / 24)}d ago`;
   }
 
   private async analyzeTrack(file: File): Promise<{ bpm: number; key: string; energy: number }> {
@@ -148,47 +488,6 @@ export class LibraryUI {
     } catch {
       return { bpm: 120, key: 'Unknown', energy: 0.5 };
     }
-  }
-
-  private renderTracks(filter = ''): void {
-    const filtered = this.tracks.filter((track) => track.name.toLowerCase().includes(filter));
-
-    this.trackListEl.innerHTML = filtered
-      .map((track) => {
-        const idx = this.tracks.indexOf(track);
-        const title = this.escapeHtml(track.name);
-        return `
-          <div class="track-card" data-index="${idx}">
-            <div class="track-art" style="--track-hue:${track.hue}">
-              <span class="track-art-letter">${title.charAt(0) || '♪'}</span>
-            </div>
-            <div class="track-info">
-              <div class="track-name" title="${title}">${title}</div>
-              <div class="track-meta">${track.bpm.toFixed(1)} BPM • ${track.key} • EN ${Math.round(track.energy * 100)} • ${track.size}</div>
-            </div>
-            <div class="track-load-row">
-              ${this.decks
-                .map(
-                  (deck) =>
-                    `<button class="btn btn-load-${deck.id.toLowerCase()}" data-deck="${deck.id}" data-index="${idx}">${deck.id}</button>`,
-                )
-                .join('')}
-            </div>
-          </div>
-        `;
-      })
-      .join('');
-
-    this.trackListEl.querySelectorAll('[data-deck]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const el = btn as HTMLElement;
-        const idx = parseInt(el.dataset.index || '-1', 10);
-        const deckId = el.dataset.deck as DeckId;
-        const deck = this.decks.find((d) => d.id === deckId);
-        if (!deck || idx < 0) return;
-        void deck.loadFile(this.tracks[idx].file);
-      });
-    });
   }
 
   private renderMatchSuggestions(): void {
