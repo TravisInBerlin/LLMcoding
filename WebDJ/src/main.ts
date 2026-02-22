@@ -55,6 +55,7 @@ root.innerHTML = `
         <option value="stemInstB">Learn: Inst B</option>
       </select>
       <button class="btn btn-mini" id="midi-learn-btn">MIDI LEARN</button>
+      <button class="btn btn-mini" id="mixer-toggle-btn">MIXER HIDE</button>
       <button class="btn btn-mini" id="deck-mode-btn">4 DECK</button>
       <button class="btn btn-mini" id="waveform-mode-btn">WAVE: H</button>
       <button class="btn btn-mini" id="automix-btn">AUTOMIX OFF</button>
@@ -93,6 +94,7 @@ new LibraryUI(document.getElementById('library-container')!, decks);
 
 let deckMode: 2 | 4 = 2;
 let waveformMode: WaveformMode = 'horizontal';
+let mixerVisible = true;
 
 const deckModeBtn = document.getElementById('deck-mode-btn') as HTMLButtonElement;
 const waveformModeBtn = document.getElementById('waveform-mode-btn') as HTMLButtonElement;
@@ -101,6 +103,7 @@ const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
 const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
 const midiLearnBtn = document.getElementById('midi-learn-btn') as HTMLButtonElement;
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
+const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 
 const applyDeckMode = (): void => {
@@ -114,8 +117,14 @@ const applyWaveformMode = (): void => {
   waveformModeBtn.textContent = waveformMode === 'horizontal' ? 'WAVE: H' : 'WAVE: V';
 };
 
+const applyMixerVisibility = (): void => {
+  root.classList.toggle('mixer-hidden', !mixerVisible);
+  mixerToggleBtn.textContent = mixerVisible ? 'MIXER HIDE' : 'MIXER SHOW';
+};
+
 applyDeckMode();
 applyWaveformMode();
+applyMixerVisibility();
 
 if (isIPad) {
   statusBadge.textContent = 'iPad Touch / Low Latency';
@@ -328,6 +337,11 @@ midiLearnBtn.addEventListener('click', async () => {
   await midi.connect();
   const target = midiLearnTarget.value as MidiLearnTarget;
   midi.setLearnTarget(target);
+});
+
+mixerToggleBtn.addEventListener('click', () => {
+  mixerVisible = !mixerVisible;
+  applyMixerVisibility();
 });
 
 // Recording

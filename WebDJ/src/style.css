@@ -111,6 +111,14 @@ body {
   gap: 10px;
 }
 
+.mixer-hidden .dj-layout {
+  grid-template-columns: 1fr;
+}
+
+.mixer-hidden .mixer-container {
+  display: none;
+}
+
 .deck-grid {
   min-height: 0;
   display: grid;
