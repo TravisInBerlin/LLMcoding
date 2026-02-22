@@ -350,15 +350,16 @@ export class Deck {
       const pos = this.currentTime;
       this.pause();
       this._offset = pos;
-      this.play();
+      void this.play();
     }
 
     this.emit('statechange');
   }
 
-  play(): void {
+  async play(): Promise<void> {
     if (!this.buffer || this._playing) return;
-    this.engine.resume();
+    await this.engine.resume();
+    if (!this.buffer || this._playing) return;
 
     this.ensureStemBuffers();
 
@@ -416,7 +417,7 @@ export class Deck {
     if (this._playing) {
       this.pause();
     } else {
-      this.play();
+      void this.play();
     }
   }
 
@@ -424,7 +425,7 @@ export class Deck {
     const wasPlaying = this._playing;
     if (wasPlaying) this.pause();
     this._offset = Math.max(0, Math.min(time, this.duration));
-    if (wasPlaying) this.play();
+    if (wasPlaying) void this.play();
     this.emit('timeupdate');
   }
 

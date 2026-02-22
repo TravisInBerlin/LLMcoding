@@ -339,7 +339,7 @@ async function runAutoDropTransition(): Promise<void> {
   }
 
   if (!deckA.playing && !deckB.playing) {
-    deckA.play();
+    await deckA.play();
     crossfader.setPosition(0);
     statusBadge.textContent = 'Auto Drop: started Deck A';
     return;
@@ -359,7 +359,7 @@ async function runAutoDropTransition(): Promise<void> {
       if (diff < -6) diff += 12;
       target.matchKey(diff);
     }
-    target.play();
+    await target.play();
   }
 
   const to = target.id === 'A' ? 0 : 1;
@@ -535,6 +535,7 @@ let recorder: MediaRecorder | null = null;
 let recordChunks: Blob[] = [];
 let recordTimer: number | null = null;
 let recordStartMs = 0;
+let recordMimeType = 'audio/webm';
 
 const formatRecTimer = (elapsedMs: number): string => {
   const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
@@ -543,11 +544,39 @@ const formatRecTimer = (elapsedMs: number): string => {
   return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 };
 
+const pickRecordingMimeType = (): string | null => {
+  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return null;
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
+};
+
+const extensionForMimeType = (mimeType: string): string => {
+  if (mimeType.includes('mp4') || mimeType.includes('aac')) return 'm4a';
+  if (mimeType.includes('ogg')) return 'ogg';
+  if (mimeType.includes('webm')) return 'webm';
+  return 'webm';
+};
+
 recordBtn.addEventListener('click', async () => {
   await engine.resume();
 
   if (!recorder || recorder.state === 'inactive') {
-    recorder = new MediaRecorder(engine.recordingStream, { mimeType: 'audio/webm' });
+    if (typeof MediaRecorder === 'undefined') {
+      statusBadge.textContent = 'Recording unsupported in this browser';
+      return;
+    }
+
+    const preferredMimeType = pickRecordingMimeType();
+    try {
+      recorder = preferredMimeType
+        ? new MediaRecorder(engine.recordingStream, { mimeType: preferredMimeType })
+        : new MediaRecorder(engine.recordingStream);
+    } catch {
+      statusBadge.textContent = 'Recording init failed on this browser';
+      return;
+    }
+
+    recordMimeType = recorder.mimeType || preferredMimeType || 'audio/webm';
     recordChunks = [];
 
     recorder.ondataavailable = (e) => {
@@ -555,11 +584,11 @@ recordBtn.addEventListener('click', async () => {
     };
 
     recorder.onstop = () => {
-      const blob = new Blob(recordChunks, { type: 'audio/webm' });
+      const blob = new Blob(recordChunks, { type: recordMimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `webdj-session-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+      a.download = `webdj-session-${new Date().toISOString().replace(/[:.]/g, '-')}.${extensionForMimeType(recordMimeType)}`;
       a.click();
       URL.revokeObjectURL(url);
     };
@@ -587,4 +616,5 @@ recordBtn.addEventListener('click', async () => {
 });
 
 document.addEventListener('click', () => engine.resume(), { once: true });
+document.addEventListener('pointerdown', () => engine.resume(), { once: true });
 document.addEventListener('touchstart', () => engine.resume(), { once: true, passive: true });
