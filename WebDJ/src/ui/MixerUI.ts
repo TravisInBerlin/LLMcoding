@@ -18,7 +18,7 @@ export class MixerUI {
   private centerTimeEls = new Map<DeckId, HTMLElement>();
   private channelBpmEls = new Map<DeckId, HTMLElement>();
   private volumeValueEls = new Map<DeckId, HTMLElement>();
-  private volumeSliderEls = new Map<DeckId, HTMLInputElement>();
+  private volumeSliderEls = new Map<DeckId, HTMLElement>();
   private muteButtons = new Map<DeckId, HTMLButtonElement>();
   private soloButtons = new Map<DeckId, HTMLButtonElement>();
   private macroButtons = new Map<
@@ -166,7 +166,20 @@ export class MixerUI {
                       </div>
                       <div class="fader-stack">
                         <span class="meter-label" title="Channel volume fader">VOL</span>
-                        <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical" title="Channel volume">
+                        <div
+                          class="linear-fader linear-fader-vertical channel-volume-fader"
+                          id="vol-${deck.id}"
+                          role="slider"
+                          tabindex="0"
+                          aria-label="Deck ${deck.id} volume"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                          aria-valuenow="80"
+                        >
+                          <div class="linear-fader-track"></div>
+                          <div class="linear-fader-progress"></div>
+                          <div class="linear-fader-thumb"></div>
+                        </div>
                         <span class="meter-value" id="vol-value-${deck.id}">80%</span>
                       </div>
                     </div>
@@ -180,7 +193,21 @@ export class MixerUI {
 
         <div class="crossfader-section">
           <span class="cf-label">A</span>
-          <input type="range" class="crossfader-slider" id="crossfader" min="0" max="100" value="50">
+          <div
+            class="linear-fader linear-fader-horizontal crossfader-control"
+            id="crossfader"
+            role="slider"
+            tabindex="0"
+            aria-label="Crossfader"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="50"
+          >
+            <div class="linear-fader-track"></div>
+            <div class="linear-fader-progress"></div>
+            <div class="linear-fader-center-mark"></div>
+            <div class="linear-fader-thumb"></div>
+          </div>
           <span class="cf-label">B</span>
         </div>
       </div>
@@ -192,7 +219,7 @@ export class MixerUI {
       this.vuMap.set(deck.id, { canvas, ctx });
       this.channelBpmEls.set(deck.id, this.el.querySelector(`#chan-bpm-${deck.id}`) as HTMLElement);
       this.volumeValueEls.set(deck.id, this.el.querySelector(`#vol-value-${deck.id}`) as HTMLElement);
-      this.volumeSliderEls.set(deck.id, this.el.querySelector(`#vol-${deck.id}`) as HTMLInputElement);
+      this.volumeSliderEls.set(deck.id, this.el.querySelector(`#vol-${deck.id}`) as HTMLElement);
       this.muteButtons.set(deck.id, this.el.querySelector(`#mute-${deck.id}`) as HTMLButtonElement);
       this.soloButtons.set(deck.id, this.el.querySelector(`#solo-${deck.id}`) as HTMLButtonElement);
       this.macroButtons.set(deck.id, {
@@ -217,10 +244,18 @@ export class MixerUI {
   }
 
   private bind(): void {
-    const cf = this.el.querySelector('#crossfader') as HTMLInputElement;
-    cf.addEventListener('input', () => {
-      this.crossfader.setPosition(parseFloat(cf.value) / 100);
+    const cf = this.el.querySelector('#crossfader') as HTMLElement;
+    this.bindLinearFader(cf, {
+      min: 0,
+      max: 100,
+      step: 1,
+      orientation: 'horizontal',
+      get: () => this.crossfader.position * 100,
+      set: (v) => {
+        this.crossfader.setPosition(v / 100);
+      },
     });
+    this.setLinearFaderValue(cf, 50, 0, 100);
 
     this.decks.forEach((deck) => {
       this.bindVolume(deck);
@@ -277,21 +312,134 @@ export class MixerUI {
     const slider = this.volumeSliderEls.get(deck.id)!;
     const valueEl = this.volumeValueEls.get(deck.id);
 
-    slider.addEventListener('input', () => {
-      if (this.soloDeck && this.soloDeck !== deck.id) {
-        this.setChannelVolume(deck.id, 0);
-        return;
-      }
-      if (this.mutedDecks.has(deck.id)) {
-        this.mutedDecks.delete(deck.id);
-        this.muteButtons.get(deck.id)?.classList.remove('active');
-      }
-      this.setChannelVolume(deck.id, parseFloat(slider.value));
+    this.bindLinearFader(slider, {
+      min: 0,
+      max: 100,
+      step: 1,
+      orientation: 'vertical',
+      get: () => this.getChannelVolume(deck.id),
+      set: (v) => {
+        if (this.soloDeck && this.soloDeck !== deck.id) {
+          this.setChannelVolume(deck.id, 0);
+          return;
+        }
+        if (this.mutedDecks.has(deck.id)) {
+          this.mutedDecks.delete(deck.id);
+          this.muteButtons.get(deck.id)?.classList.remove('active');
+        }
+        this.setChannelVolume(deck.id, v);
+      },
     });
 
-    slider.value = '80';
     this.setChannelVolume(deck.id, 80);
     if (valueEl) valueEl.textContent = '80%';
+  }
+
+  private bindLinearFader(
+    el: HTMLElement,
+    opts: {
+      min: number;
+      max: number;
+      step: number;
+      orientation: 'vertical' | 'horizontal';
+      get: () => number;
+      set: (next: number) => void;
+    },
+  ): void {
+    const { min, max, step, orientation, get, set } = opts;
+    let dragging = false;
+    let pointerId: number | null = null;
+
+    const apply = (raw: number): void => {
+      const snapped = Math.round(raw / step) * step;
+      const next = this.clamp(snapped, min, max);
+      set(next);
+      this.setLinearFaderValue(el, next, min, max);
+    };
+
+    const applyFromPointer = (event: PointerEvent): void => {
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const ratioRaw =
+        orientation === 'horizontal'
+          ? (event.clientX - rect.left) / rect.width
+          : 1 - (event.clientY - rect.top) / rect.height;
+      const ratio = this.clamp(ratioRaw, 0, 1);
+      const next = min + ratio * (max - min);
+      apply(next);
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      pointerId = e.pointerId;
+      el.setPointerCapture(e.pointerId);
+      applyFromPointer(e);
+      e.preventDefault();
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging || pointerId !== e.pointerId) return;
+      applyFromPointer(e);
+      e.preventDefault();
+    });
+
+    const stop = (e: PointerEvent): void => {
+      if (pointerId !== e.pointerId) return;
+      dragging = false;
+      if (el.hasPointerCapture(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
+      pointerId = null;
+    };
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+
+    el.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      apply(get() + dir * step);
+    });
+
+    el.addEventListener('keydown', (e) => {
+      const key = e.key;
+      const dirKeys =
+        orientation === 'horizontal'
+          ? key === 'ArrowRight' || key === 'ArrowUp' || key === 'PageUp'
+          : key === 'ArrowUp' || key === 'ArrowRight' || key === 'PageUp';
+      const negKeys =
+        orientation === 'horizontal'
+          ? key === 'ArrowLeft' || key === 'ArrowDown' || key === 'PageDown'
+          : key === 'ArrowDown' || key === 'ArrowLeft' || key === 'PageDown';
+
+      if (key === 'Home') {
+        apply(min);
+        e.preventDefault();
+        return;
+      }
+      if (key === 'End') {
+        apply(max);
+        e.preventDefault();
+        return;
+      }
+      if (dirKeys) {
+        apply(get() + step);
+        e.preventDefault();
+        return;
+      }
+      if (negKeys) {
+        apply(get() - step);
+        e.preventDefault();
+      }
+    });
+
+    apply(get());
+  }
+
+  private setLinearFaderValue(el: HTMLElement, value: number, min: number, max: number): void {
+    const ratio = (this.clamp(value, min, max) - min) / (max - min);
+    el.style.setProperty('--fader-ratio', `${Math.max(0, Math.min(1, ratio))}`);
+    el.setAttribute('aria-valuenow', `${Math.round(value)}`);
+    el.dataset.value = `${value}`;
   }
 
   private bindEQ(deck: Deck): void {
@@ -792,13 +940,16 @@ export class MixerUI {
 
     const clamped = this.clamp(value, 0, 100);
     deck.volume = clamped / 100;
-    slider.value = `${Math.round(clamped)}`;
+    this.setLinearFaderValue(slider, clamped, 0, 100);
     if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
   }
 
   private getChannelVolume(deckId: DeckId): number {
     const slider = this.volumeSliderEls.get(deckId);
-    if (slider) return parseFloat(slider.value) || 0;
+    if (slider) {
+      const raw = slider.dataset.value;
+      if (raw !== undefined) return parseFloat(raw) || 0;
+    }
     const deck = this.decks.find((d) => d.id === deckId);
     return deck ? deck.volume * 100 : 0;
   }
