@@ -21,6 +21,7 @@ export class DeckUI {
   private keyShiftKnob!: HTMLElement;
   private keyLabel!: HTMLElement;
   private keyLockBtn!: HTMLButtonElement;
+  private syncBtn!: HTMLButtonElement;
   private loopInBtn!: HTMLButtonElement;
   private loopOutBtn!: HTMLButtonElement;
   private loopToggleBtn!: HTMLButtonElement;
@@ -160,6 +161,7 @@ export class DeckUI {
     this.keyShiftKnob = this.el.querySelector(`#key-knob-${side}`)!;
     this.keyLabel = this.el.querySelector(`#key-shift-label-${side}`)!;
     this.keyLockBtn = this.el.querySelector(`#key-lock-${side}`)!;
+    this.syncBtn = this.el.querySelector(`#sync-btn-${side}`)!;
     this.loopInBtn = this.el.querySelector(`#loop-in-${side}`)!;
     this.loopOutBtn = this.el.querySelector(`#loop-out-${side}`)!;
     this.loopToggleBtn = this.el.querySelector(`#loop-toggle-${side}`)!;
@@ -279,13 +281,22 @@ export class DeckUI {
       this.deck.keyLock = !this.deck.keyLock;
     });
 
-    this.el.querySelector(`#sync-btn-${side}`)!.addEventListener('click', () => {
+    this.syncBtn.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('sync-request', { detail: { deckId: side } }));
     });
 
     this.el.querySelector(`#key-match-${side}`)!.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('keymatch-request', { detail: { deckId: side } }));
     });
+
+    window.addEventListener(
+      'sync-feedback',
+      ((e: CustomEvent) => {
+        if (e.detail.deckId !== this.deck.id) return;
+        this.syncBtn.classList.add('active');
+        window.setTimeout(() => this.syncBtn.classList.remove('active'), 340);
+      }) as EventListener,
+    );
 
     this.setupJogWheel();
 

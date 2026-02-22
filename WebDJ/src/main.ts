@@ -222,7 +222,49 @@ window.addEventListener(
       .filter((d) => d.id !== sourceId && d.bpm > 0)
       .sort((a, b) => (b.playing ? 1 : 0) - (a.playing ? 1 : 0))[0];
 
-    if (targetDeck) sourceDeck.syncTo(targetDeck.bpm);
+    if (!targetDeck) {
+      statusBadge.textContent = `SYNC ${sourceId}: no target deck with BPM`;
+      window.dispatchEvent(new CustomEvent('sync-feedback', { detail: { deckId: sourceId, ok: false } }));
+      return;
+    }
+
+    if (sourceDeck.bpm <= 0) {
+      statusBadge.textContent = `SYNC ${sourceId}: source BPM unknown`;
+      window.dispatchEvent(new CustomEvent('sync-feedback', { detail: { deckId: sourceId, ok: false } }));
+      return;
+    }
+
+    const beforeTempo = sourceDeck.tempoPercent;
+    const beforeEffectiveBpm = sourceDeck.bpm * (1 + beforeTempo / 100);
+
+    sourceDeck.syncTo(targetDeck.bpm);
+
+    const afterTempo = sourceDeck.tempoPercent;
+    const afterEffectiveBpm = sourceDeck.bpm * (1 + afterTempo / 100);
+    const tempoDelta = afterTempo - beforeTempo;
+    const nearTarget = Math.abs(afterEffectiveBpm - targetDeck.bpm) < 0.15;
+    const clamped = Math.abs(afterTempo) >= 74.9 && !nearTarget;
+    const noChange = Math.abs(tempoDelta) < 0.05;
+
+    const signTempo = afterTempo >= 0 ? '+' : '';
+    const signDelta = tempoDelta >= 0 ? '+' : '';
+
+    if (noChange) {
+      statusBadge.textContent = `SYNC ${sourceId} -> ${targetDeck.id}: already matched (${afterEffectiveBpm.toFixed(1)} BPM)`;
+    } else {
+      statusBadge.textContent = `SYNC ${sourceId} -> ${targetDeck.id}: ${beforeEffectiveBpm.toFixed(1)} -> ${afterEffectiveBpm.toFixed(1)} BPM (${signTempo}${afterTempo.toFixed(1)}%, ${signDelta}${tempoDelta.toFixed(1)}%)${clamped ? ' [tempo limit]' : ''}`;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('sync-feedback', {
+        detail: {
+          deckId: sourceId,
+          ok: true,
+          targetDeckId: targetDeck.id,
+          tempoPercent: afterTempo,
+        },
+      }),
+    );
   }) as EventListener,
 );
 
