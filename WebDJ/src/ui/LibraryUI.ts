@@ -26,6 +26,10 @@ export class LibraryUI {
     this.bind();
   }
 
+  async importFiles(fileList: FileList): Promise<void> {
+    await this.addFiles(fileList);
+  }
+
   private render(): void {
     this.el.innerHTML = `
       <div class="library-panel">
@@ -90,7 +94,7 @@ export class LibraryUI {
     });
 
     filePicker.addEventListener('change', () => {
-      if (filePicker.files) void this.addFiles(filePicker.files);
+      if (filePicker.files) void this.importFiles(filePicker.files);
     });
 
     window.addEventListener('library-open-picker', () => {

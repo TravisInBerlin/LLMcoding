@@ -60,6 +60,7 @@ root.innerHTML = `
       <button class="btn btn-mini btn-muted" id="midi-learn-cancel-btn" title="MIDI学習モードを中断します">LEARN CANCEL</button>
       <button class="btn btn-mini btn-muted" id="mixer-toggle-btn" title="中央MIXERの表示/非表示を切り替えます">MIXER HIDE</button>
       <button class="btn btn-mini btn-muted" id="library-toggle-btn" title="ライブラリパネルの表示/非表示を切り替えます">LIBRARY HIDE</button>
+      <button class="btn btn-mini btn-accent" id="header-import-btn" title="曲ファイルを取り込む">ADD FILES</button>
       <button class="btn btn-mini btn-muted" id="deck-mode-btn" title="2デッキ/4デッキを切り替えます">4 DECK</button>
       <button class="btn btn-mini btn-muted" id="waveform-mode-btn" title="波形表示を横/縦で切り替えます">WAVE: H</button>
       <select id="transition-style" class="midi-learn-select transition-select" title="クロスフェード時のミックス特性を選びます">
@@ -104,6 +105,7 @@ root.innerHTML = `
     </section>
   </main>
 
+  <input type="file" id="global-file-picker" class="file-picker-input" multiple accept="audio/*">
   <section class="library-container" id="library-container"></section>
   <button class="btn btn-accent quick-import-fab" id="quick-import-btn" title="曲を取り込む">+ ADD FILES</button>
 `;
@@ -122,7 +124,7 @@ deckIds.forEach((id) => {
 });
 
 new MixerUI(document.getElementById('mixer-container')!, decks, crossfader);
-new LibraryUI(document.getElementById('library-container')!, decks);
+const libraryUI = new LibraryUI(document.getElementById('library-container')!, decks);
 
 let deckMode: 2 | 4 = 2;
 let waveformMode: WaveformMode = 'horizontal';
@@ -142,7 +144,9 @@ const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as H
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
 const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
 const libraryToggleBtn = document.getElementById('library-toggle-btn') as HTMLButtonElement;
+const headerImportBtn = document.getElementById('header-import-btn') as HTMLButtonElement;
 const quickImportBtn = document.getElementById('quick-import-btn') as HTMLButtonElement;
+const globalFilePicker = document.getElementById('global-file-picker') as HTMLInputElement;
 const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButtonElement;
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 const guidePanel = document.getElementById('guide-panel') as HTMLElement;
@@ -153,9 +157,14 @@ const applyDeckMode = (): void => {
   root.classList.toggle('mode-4', deckMode === 4);
   deckModeBtn.textContent = deckMode === 2 ? '4 DECK' : '2 DECK';
   const auxRow = document.getElementById('aux-row') as HTMLElement | null;
+  const deckC = document.getElementById('deck-c-container') as HTMLElement | null;
+  const deckD = document.getElementById('deck-d-container') as HTMLElement | null;
   if (auxRow) {
     auxRow.style.display = deckMode === 4 ? 'grid' : 'none';
   }
+  if (deckC) deckC.style.display = deckMode === 4 ? '' : 'none';
+  if (deckD) deckD.style.display = deckMode === 4 ? '' : 'none';
+  statusBadge.textContent = deckMode === 4 ? 'Deck mode: 4 Deck' : 'Deck mode: 2 Deck';
 };
 
 const applyWaveformMode = (): void => {
@@ -178,11 +187,9 @@ const openFileImport = (): void => {
     libraryVisible = true;
     applyLibraryVisibility();
   }
-  const picker = document.getElementById('file-picker') as HTMLInputElement | null;
-  if (picker) {
-    picker.click();
-  } else {
-    window.dispatchEvent(new CustomEvent('library-open-picker'));
+  if (globalFilePicker) {
+    globalFilePicker.value = '';
+    globalFilePicker.click();
   }
   statusBadge.textContent = 'Choose audio files to import';
 };
@@ -492,6 +499,15 @@ libraryToggleBtn.addEventListener('click', () => {
 
 quickImportBtn.addEventListener('click', () => {
   openFileImport();
+});
+
+headerImportBtn.addEventListener('click', () => {
+  openFileImport();
+});
+
+globalFilePicker.addEventListener('change', () => {
+  if (!globalFilePicker.files || globalFilePicker.files.length === 0) return;
+  void libraryUI.importFiles(globalFilePicker.files);
 });
 
 guideToggleBtn.addEventListener('click', () => {
