@@ -26,17 +26,21 @@ export class MixerUI {
       <div class="center-panel">
         <div class="center-trackline">
           <div class="center-track center-track-a">
-            <span class="center-deck-tag">A</span>
-            <span class="center-track-name" id="center-track-A">No Track Loaded</span>
+            <div class="center-track-top">
+              <span class="center-deck-tag">A</span>
+              <span class="center-track-name" id="center-track-A">No Track Loaded</span>
+              <span class="center-track-time" id="center-time-A">0:00</span>
+            </div>
             <span class="center-track-meta" id="center-meta-A">-- BPM / Key --</span>
-            <span class="center-track-time" id="center-time-A">0:00</span>
           </div>
-          <div class="center-divider-text">NEURAL MIX</div>
+          <div class="center-divider-text">MIX STATUS</div>
           <div class="center-track center-track-b">
-            <span class="center-track-time" id="center-time-B">0:00</span>
+            <div class="center-track-top">
+              <span class="center-deck-tag">B</span>
+              <span class="center-track-name" id="center-track-B">No Track Loaded</span>
+              <span class="center-track-time" id="center-time-B">0:00</span>
+            </div>
             <span class="center-track-meta" id="center-meta-B">-- BPM / Key --</span>
-            <span class="center-track-name" id="center-track-B">No Track Loaded</span>
-            <span class="center-deck-tag">B</span>
           </div>
         </div>
 

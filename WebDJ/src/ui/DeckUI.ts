@@ -16,9 +16,9 @@ export class DeckUI {
   private stemProgressBarEl!: HTMLElement;
   private trackEl!: HTMLElement;
   private playBtn!: HTMLButtonElement;
-  private pitchSlider!: HTMLInputElement;
+  private tempoKnob!: HTMLElement;
   private pitchLabel!: HTMLElement;
-  private keySlider!: HTMLInputElement;
+  private keyShiftKnob!: HTMLElement;
   private keyLabel!: HTMLElement;
   private keyLockBtn!: HTMLButtonElement;
   private loopInBtn!: HTMLButtonElement;
@@ -44,9 +44,8 @@ export class DeckUI {
 
   private render(): void {
     const side = this.deck.id;
-    const deckLayoutClass = side === 'B' || side === 'D' ? ' deck-right-layout' : '';
     this.el.innerHTML = `
-      <div class="deck-surface deck-${side.toLowerCase()}${deckLayoutClass}" style="--deck-accent:${this.accentColor};">
+      <div class="deck-surface deck-${side.toLowerCase()}" style="--deck-accent:${this.accentColor};">
         <div class="deck-strip">
           <div class="deck-strip-art">${side}</div>
           <div class="deck-strip-main">
@@ -124,15 +123,19 @@ export class DeckUI {
           </div>
 
           <div class="pitch-control">
-            <div class="slider-column">
+            <div class="knob-column">
               <div class="slider-role">TEMPO (速度)</div>
+              <button class="deck-knob" id="tempo-knob-${side}" type="button" aria-label="Tempo knob">
+                <span class="deck-knob-indicator"></span>
+              </button>
               <label class="pitch-label" id="pitch-label-${side}">+0.0%</label>
-              <input type="range" class="pitch-slider" id="pitch-${side}" min="-75" max="75" value="0" orient="vertical" aria-label="Tempo">
             </div>
-            <div class="slider-column">
+            <div class="knob-column">
               <div class="slider-role">KEY SHIFT (半音)</div>
+              <button class="deck-knob" id="key-knob-${side}" type="button" aria-label="Key shift knob">
+                <span class="deck-knob-indicator"></span>
+              </button>
               <label class="pitch-label" id="key-shift-label-${side}">KEY +0 st</label>
-              <input type="range" class="pitch-slider" id="key-shift-${side}" min="-12" max="12" value="0" orient="vertical" aria-label="Key Shift">
             </div>
           </div>
         </div>
@@ -152,9 +155,9 @@ export class DeckUI {
     this.stemProgressBarEl = this.el.querySelector(`#stem-progress-${side}`)!;
     this.trackEl = this.el.querySelector(`#track-${side}`)!;
     this.playBtn = this.el.querySelector(`#play-btn-${side}`)!;
-    this.pitchSlider = this.el.querySelector(`#pitch-${side}`)!;
+    this.tempoKnob = this.el.querySelector(`#tempo-knob-${side}`)!;
     this.pitchLabel = this.el.querySelector(`#pitch-label-${side}`)!;
-    this.keySlider = this.el.querySelector(`#key-shift-${side}`)!;
+    this.keyShiftKnob = this.el.querySelector(`#key-knob-${side}`)!;
     this.keyLabel = this.el.querySelector(`#key-shift-label-${side}`)!;
     this.keyLockBtn = this.el.querySelector(`#key-lock-${side}`)!;
     this.loopInBtn = this.el.querySelector(`#loop-in-${side}`)!;
@@ -236,31 +239,29 @@ export class DeckUI {
       });
     });
 
-    this.pitchSlider.addEventListener('input', () => {
-      const val = parseFloat(this.pitchSlider.value);
-      this.deck.tempoPercent = val;
-      const sign = val >= 0 ? '+' : '';
-      this.pitchLabel.textContent = `${sign}${val.toFixed(1)}%`;
-    });
+    this.bindKnobControl(
+      this.tempoKnob,
+      () => this.deck.tempoPercent,
+      (v) => {
+        this.deck.tempoPercent = v;
+      },
+      -75,
+      75,
+      0.1,
+      0,
+    );
 
-    this.pitchSlider.addEventListener('dblclick', () => {
-      this.pitchSlider.value = '0';
-      this.deck.tempoPercent = 0;
-      this.pitchLabel.textContent = '+0.0%';
-    });
-
-    this.keySlider.addEventListener('input', () => {
-      const semi = parseFloat(this.keySlider.value);
-      this.deck.keySemitone = semi;
-      const sign = semi >= 0 ? '+' : '';
-      this.keyLabel.textContent = `KEY ${sign}${Math.round(semi)} st`;
-    });
-
-    this.keySlider.addEventListener('dblclick', () => {
-      this.keySlider.value = '0';
-      this.deck.keySemitone = 0;
-      this.keyLabel.textContent = 'KEY +0 st';
-    });
+    this.bindKnobControl(
+      this.keyShiftKnob,
+      () => this.deck.keySemitone,
+      (v) => {
+        this.deck.keySemitone = Math.round(v);
+      },
+      -12,
+      12,
+      1,
+      0,
+    );
 
     this.keyLockBtn.addEventListener('click', () => {
       this.deck.keyLock = !this.deck.keyLock;
@@ -310,6 +311,7 @@ export class DeckUI {
       this.syncCueState();
       this.syncLoopState();
       this.updateMeta();
+      this.syncTempoKeyUI();
       this.keyLockBtn.classList.toggle('active', this.deck.keyLock);
       this.keyLockBtn.setAttribute('aria-pressed', String(this.deck.keyLock));
     });
@@ -317,6 +319,7 @@ export class DeckUI {
     this.updateCueBankUI();
     this.syncCueState();
     this.syncLoopState();
+    this.syncTempoKeyUI();
     this.keyLockBtn.setAttribute('aria-pressed', String(this.deck.keyLock));
     this.updateVinylStyle();
   }
@@ -367,6 +370,86 @@ export class DeckUI {
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-pressed', String(active));
     });
+  }
+
+  private syncTempoKeyUI(): void {
+    const tempo = this.deck.tempoPercent;
+    const tempoSign = tempo >= 0 ? '+' : '';
+    this.pitchLabel.textContent = `${tempoSign}${tempo.toFixed(1)}%`;
+    this.setKnobRotation(this.tempoKnob, tempo, -75, 75);
+
+    const key = Math.round(this.deck.keySemitone);
+    const keySign = key >= 0 ? '+' : '';
+    this.keyLabel.textContent = `KEY ${keySign}${key} st`;
+    this.setKnobRotation(this.keyShiftKnob, key, -12, 12);
+  }
+
+  private setKnobRotation(el: HTMLElement, value: number, min: number, max: number): void {
+    const normalized = (value - min) / (max - min);
+    const clamped = Math.max(0, Math.min(1, normalized));
+    const deg = -140 + clamped * 280;
+    el.style.setProperty('--knob-angle', `${deg}deg`);
+  }
+
+  private bindKnobControl(
+    el: HTMLElement,
+    getValue: () => number,
+    setValue: (next: number) => void,
+    min: number,
+    max: number,
+    step: number,
+    resetValue: number,
+  ): void {
+    let dragging = false;
+    let pointerId: number | null = null;
+    let startY = 0;
+    let startValue = 0;
+    const sensitivity = (max - min) / 220;
+
+    const apply = (raw: number): void => {
+      const snapped = Math.round(raw / step) * step;
+      const next = this.clamp(snapped, min, max);
+      setValue(next);
+      this.syncTempoKeyUI();
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      pointerId = e.pointerId;
+      startY = e.clientY;
+      startValue = getValue();
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging || pointerId !== e.pointerId) return;
+      const delta = startY - e.clientY;
+      apply(startValue + delta * sensitivity);
+    });
+
+    const stop = (e: PointerEvent) => {
+      if (pointerId !== e.pointerId) return;
+      dragging = false;
+      pointerId = null;
+    };
+
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+
+    el.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const direction = e.deltaY < 0 ? 1 : -1;
+      apply(getValue() + direction * step);
+    });
+
+    el.addEventListener('dblclick', () => {
+      apply(resetValue);
+    });
+  }
+
+  private clamp(v: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, v));
   }
 
   private getCueId(visibleSlot: number): number {

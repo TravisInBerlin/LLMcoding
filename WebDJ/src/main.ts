@@ -32,8 +32,8 @@ root.innerHTML = `
       <span class="header-badge" id="status-badge">djay-style / iPad Performance</span>
     </div>
     <div class="header-actions">
-      <button class="btn btn-mini btn-muted" id="midi-btn">MIDI CONNECT</button>
-      <select id="midi-learn-target" class="midi-learn-select">
+      <button class="btn btn-mini btn-muted" id="midi-btn" title="MIDIコントローラーを接続/切断します">MIDI CONNECT</button>
+      <select id="midi-learn-target" class="midi-learn-select" title="MIDI LEARNで割り当てる操作を選択します">
         <option value="playA">Learn: Play A</option>
         <option value="playB">Learn: Play B</option>
         <option value="cueA">Learn: Cue A</option>
@@ -56,22 +56,30 @@ root.innerHTML = `
         <option value="stemInstA">Learn: Inst A</option>
         <option value="stemInstB">Learn: Inst B</option>
       </select>
-      <button class="btn btn-mini btn-muted" id="midi-learn-btn">MIDI LEARN</button>
-      <button class="btn btn-mini btn-muted" id="midi-learn-cancel-btn">LEARN CANCEL</button>
-      <button class="btn btn-mini btn-muted" id="mixer-toggle-btn">MIXER HIDE</button>
-      <button class="btn btn-mini btn-muted" id="deck-mode-btn">4 DECK</button>
-      <button class="btn btn-mini btn-muted" id="waveform-mode-btn">WAVE: H</button>
-      <select id="transition-style" class="midi-learn-select transition-select">
+      <button class="btn btn-mini btn-muted" id="midi-learn-btn" title="選択した操作を次に受けたMIDI信号へ割り当てます">MIDI LEARN</button>
+      <button class="btn btn-mini btn-muted" id="midi-learn-cancel-btn" title="MIDI学習モードを中断します">LEARN CANCEL</button>
+      <button class="btn btn-mini btn-muted" id="mixer-toggle-btn" title="中央MIXERの表示/非表示を切り替えます">MIXER HIDE</button>
+      <button class="btn btn-mini btn-muted" id="deck-mode-btn" title="2デッキ/4デッキを切り替えます">4 DECK</button>
+      <button class="btn btn-mini btn-muted" id="waveform-mode-btn" title="波形表示を横/縦で切り替えます">WAVE: H</button>
+      <select id="transition-style" class="midi-learn-select transition-select" title="クロスフェード時のミックス特性を選びます">
         <option value="smooth">XFADE: SMOOTH</option>
         <option value="power">XFADE: POWER</option>
         <option value="neural">XFADE: NEURAL</option>
       </select>
-      <button class="btn btn-mini btn-accent" id="auto-drop-btn">AUTO DROP</button>
-      <button class="btn btn-mini btn-muted" id="guide-toggle-btn">GUIDE</button>
-      <button class="btn btn-mini btn-key" id="automix-btn">AUTOMIX OFF</button>
-      <button class="btn btn-mini btn-cue" id="record-btn">REC START</button>
+      <button class="btn btn-mini btn-accent" id="auto-drop-btn" title="A/Bの自動トランジションを一回実行します">AUTO DROP</button>
+      <button class="btn btn-mini btn-muted" id="guide-toggle-btn" title="操作ガイドの表示/非表示を切り替えます">GUIDE</button>
+      <button class="btn btn-mini btn-key" id="automix-btn" title="定期自動ミックスのON/OFFを切り替えます">AUTOMIX OFF</button>
+      <button class="btn btn-mini btn-cue" id="record-btn" title="マスター出力の録音開始/停止">REC START</button>
     </div>
   </header>
+
+  <section class="toolbar-help" id="toolbar-help">
+    <span class="toolbar-help-item"><strong>MIDI CONNECT</strong>MIDI機器の接続</span>
+    <span class="toolbar-help-item"><strong>Learn: Play A</strong>学習対象の操作を選択</span>
+    <span class="toolbar-help-item"><strong>MIDI LEARN</strong>次のMIDI信号に割当</span>
+    <span class="toolbar-help-item"><strong>MIXER / 4 DECK / WAVE</strong>画面レイアウト切替</span>
+    <span class="toolbar-help-item"><strong>AUTO DROP / AUTOMIX / REC</strong>自動遷移・自動MIX・録音</span>
+  </section>
 
   <section class="guide-panel" id="guide-panel">
     <span><strong>1.</strong> Add Files でライブラリに曲を追加</span>
