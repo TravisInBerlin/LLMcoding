@@ -568,12 +568,12 @@ body {
 }
 
 .volume-fader {
-  -webkit-appearance: none;
-  appearance: none;
+  -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
   writing-mode: vertical-lr;
-  direction: rtl;
-  border-radius: 5px;
-  background: rgba(158, 173, 199, 0.24);
+  direction: ltr;
+  border-radius: 999px;
+  background: transparent;
   touch-action: none;
   margin: 0;
   padding: 0;
@@ -581,24 +581,26 @@ body {
 }
 
 .volume-fader {
-  width: 10px;
+  width: 18px;
   height: var(--meter-height, 84px);
 }
 
 .volume-fader::-webkit-slider-runnable-track {
-  width: 8px;
+  width: 10px;
   height: 100%;
   border-radius: 999px;
-  border: 1px solid rgba(214, 223, 240, 0.18);
-  background: linear-gradient(180deg, rgba(196, 208, 228, 0.18), rgba(74, 86, 112, 0.34));
+  border: 1px solid rgba(198, 211, 236, 0.2);
+  background: linear-gradient(180deg, rgba(174, 191, 220, 0.24), rgba(55, 67, 92, 0.45));
+  box-shadow: inset 0 0 0 1px rgba(8, 11, 18, 0.65), inset 0 8px 14px rgba(0, 0, 0, 0.28);
 }
 
 .volume-fader::-moz-range-track {
-  width: 8px;
+  width: 10px;
   height: 100%;
   border-radius: 999px;
-  border: 1px solid rgba(214, 223, 240, 0.18);
-  background: linear-gradient(180deg, rgba(196, 208, 228, 0.18), rgba(74, 86, 112, 0.34));
+  border: 1px solid rgba(198, 211, 236, 0.2);
+  background: linear-gradient(180deg, rgba(174, 191, 220, 0.24), rgba(55, 67, 92, 0.45));
+  box-shadow: inset 0 0 0 1px rgba(8, 11, 18, 0.65), inset 0 8px 14px rgba(0, 0, 0, 0.28);
 }
 
 .volume-fader::-webkit-slider-thumb,
@@ -608,19 +610,21 @@ body {
 }
 
 .volume-fader::-webkit-slider-thumb {
-  width: 16px;
-  height: 10px;
+  width: 18px;
+  height: 12px;
   border-radius: 999px;
-  border: 1px solid rgba(241, 246, 255, 0.75);
-  background: linear-gradient(180deg, #f9fcff, #d7e0f2);
+  border: 1px solid rgba(242, 247, 255, 0.9);
+  background: linear-gradient(180deg, #f7fbff, #d3deef);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .volume-fader::-moz-range-thumb {
-  width: 16px;
-  height: 10px;
+  width: 18px;
+  height: 12px;
   border-radius: 999px;
-  border: 1px solid rgba(241, 246, 255, 0.75);
-  background: linear-gradient(180deg, #f9fcff, #d7e0f2);
+  border: 1px solid rgba(242, 247, 255, 0.9);
+  background: linear-gradient(180deg, #f7fbff, #d3deef);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .btn {
@@ -1125,15 +1129,35 @@ body {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 8px;
-  background: linear-gradient(90deg, rgba(92, 205, 253, 0.65), rgba(230, 237, 247, 0.3), rgba(255, 156, 97, 0.65));
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 214, 238, 0.2);
+  background: linear-gradient(90deg, rgba(77, 194, 245, 0.72), rgba(213, 225, 243, 0.26), rgba(240, 156, 104, 0.74));
+  box-shadow: inset 0 0 0 1px rgba(9, 12, 19, 0.75), inset 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
 .crossfader-section {
+  position: relative;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 8px;
   align-items: center;
+  border: 1px solid rgba(206, 218, 240, 0.2);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  background: linear-gradient(180deg, rgba(13, 20, 31, 0.72), rgba(10, 16, 27, 0.6));
+}
+
+.crossfader-section::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(214, 224, 242, 0.05), rgba(224, 235, 252, 0.48), rgba(214, 224, 242, 0.05));
+  pointer-events: none;
 }
 
 .cf-label {
@@ -1144,9 +1168,22 @@ body {
 .crossfader-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  background: #f4f8ff;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid rgba(240, 246, 255, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(216, 226, 241, 0.92)),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.15), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.15));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 14px rgba(0, 0, 0, 0.35);
+}
+
+.crossfader-slider::-moz-range-thumb {
+  width: 20px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid rgba(240, 246, 255, 0.92);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(216, 226, 241, 0.92));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 14px rgba(0, 0, 0, 0.35);
 }
 
 .library-panel {
