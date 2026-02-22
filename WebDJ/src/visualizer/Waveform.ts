@@ -22,7 +22,7 @@ export class Waveform {
     this.resize();
     window.addEventListener('resize', () => this.resize());
 
-    this.canvas.addEventListener('click', (e) => {
+    this.canvas.addEventListener('pointerdown', (e) => {
       if (!this.deck.duration) return;
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;

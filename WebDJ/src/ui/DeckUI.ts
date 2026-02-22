@@ -256,22 +256,26 @@ export class DeckUI {
 
   private setupJogWheel(): void {
     let dragging = false;
+    let activePointerId: number | null = null;
     let lastAngle = 0;
 
-    const getAngle = (e: MouseEvent): number => {
+    const getAngle = (e: PointerEvent): number => {
       const rect = this.jogEl.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
       return (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI;
     };
 
-    this.jogEl.addEventListener('mousedown', (e) => {
+    this.jogEl.addEventListener('pointerdown', (e) => {
+      activePointerId = e.pointerId;
       dragging = true;
       lastAngle = getAngle(e);
+      this.jogEl.setPointerCapture(e.pointerId);
       e.preventDefault();
     });
 
-    document.addEventListener('mousemove', (e) => {
+    this.jogEl.addEventListener('pointermove', (e) => {
+      if (activePointerId !== e.pointerId) return;
       if (!dragging || !this.deck.buffer) return;
       const angle = getAngle(e);
       let delta = angle - lastAngle;
@@ -285,9 +289,14 @@ export class DeckUI {
       this.jogEl.style.transform = `rotate(${this.jogAngle}deg)`;
     });
 
-    document.addEventListener('mouseup', () => {
+    const stop = (e: PointerEvent) => {
+      if (activePointerId !== e.pointerId) return;
       dragging = false;
-    });
+      activePointerId = null;
+    };
+
+    this.jogEl.addEventListener('pointerup', stop);
+    this.jogEl.addEventListener('pointercancel', stop);
   }
 
   private formatTime(seconds: number): string {

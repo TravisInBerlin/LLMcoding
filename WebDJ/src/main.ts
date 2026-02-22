@@ -4,6 +4,7 @@ import { Crossfader } from './audio/Crossfader';
 import { DeckUI } from './ui/DeckUI';
 import { MixerUI } from './ui/MixerUI';
 import { LibraryUI } from './ui/LibraryUI';
+import { MidiController } from './midi/MidiController';
 import type { WaveformMode } from './visualizer/Waveform';
 import './style.css';
 
@@ -18,13 +19,18 @@ crossfader.onChange((pos) => applyCrossfaderFusion(pos));
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
 root.classList.add('mode-2');
+const isTouch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
+if (isTouch) root.classList.add('touch-mode');
+if (isIPad) root.classList.add('ipad-mode');
 root.innerHTML = `
   <header class="app-header">
     <div class="logo">
       <span class="logo-text">WebDJ NEXUS</span>
-      <span class="header-badge">iPad-ready / Pro Mix</span>
+      <span class="header-badge" id="status-badge">iPad-ready / Pro Mix</span>
     </div>
     <div class="header-actions">
+      <button class="btn btn-mini" id="midi-btn">MIDI CONNECT</button>
       <button class="btn btn-mini" id="deck-mode-btn">4 DECK</button>
       <button class="btn btn-mini" id="waveform-mode-btn">WAVE: H</button>
       <button class="btn btn-mini" id="automix-btn">AUTOMIX OFF</button>
@@ -68,6 +74,8 @@ const deckModeBtn = document.getElementById('deck-mode-btn') as HTMLButtonElemen
 const waveformModeBtn = document.getElementById('waveform-mode-btn') as HTMLButtonElement;
 const automixBtn = document.getElementById('automix-btn') as HTMLButtonElement;
 const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
+const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
+const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 
 const applyDeckMode = (): void => {
   root.classList.toggle('mode-2', deckMode === 2);
@@ -82,6 +90,10 @@ const applyWaveformMode = (): void => {
 
 applyDeckMode();
 applyWaveformMode();
+
+if (isIPad) {
+  statusBadge.textContent = 'iPad Touch / Low Latency';
+}
 
 // Sync requests
 window.addEventListener(
@@ -231,6 +243,56 @@ automixBtn.addEventListener('click', () => {
   setAutomix(!automixEnabled);
 });
 
+const midi = new MidiController(
+  {
+    onPlayToggle: (deckId) => deckMap.get(deckId)?.togglePlay(),
+    onCue: (deckId) => deckMap.get(deckId)?.seek(0),
+    onSync: (deckId) => window.dispatchEvent(new CustomEvent('sync-request', { detail: { deckId } })),
+    onKeyMatch: (deckId) => window.dispatchEvent(new CustomEvent('keymatch-request', { detail: { deckId } })),
+    onCrossfader: (value01) => crossfader.setPosition(value01),
+    onVolume: (deckId, value01) => {
+      const d = deckMap.get(deckId);
+      if (!d) return;
+      d.volume = value01;
+    },
+    onTempo: (deckId, tempoPercent) => {
+      const d = deckMap.get(deckId);
+      if (!d) return;
+      d.tempoPercent = tempoPercent;
+    },
+    onFilter: (deckId, value) => {
+      const d = deckMap.get(deckId);
+      if (!d) return;
+      d.setFilterBlend(value);
+    },
+    onStemVocal: (deckId, value01) => deckMap.get(deckId)?.setStemLevel('vocals', value01),
+    onStemDrums: (deckId, value01) => deckMap.get(deckId)?.setStemLevel('drums', value01),
+    onStemInst: (deckId, value01) => deckMap.get(deckId)?.setStemLevel('instruments', value01),
+  },
+  (status) => {
+    if (status.state === 'unsupported') {
+      midiBtn.textContent = 'MIDI UNSUPPORTED';
+      midiBtn.disabled = true;
+      statusBadge.textContent = 'Web MIDI unavailable';
+      return;
+    }
+    if (status.state === 'disconnected') {
+      midiBtn.textContent = 'MIDI CONNECT';
+      midiBtn.classList.remove('active');
+      statusBadge.textContent = 'MIDI not connected';
+      return;
+    }
+    midiBtn.textContent = 'MIDI CONNECTED';
+    midiBtn.classList.add('active');
+    statusBadge.textContent = `MIDI: ${status.inputName}`;
+  },
+);
+
+midiBtn.addEventListener('click', async () => {
+  await engine.resume();
+  await midi.connect();
+});
+
 // Recording
 let recorder: MediaRecorder | null = null;
 let recordChunks: Blob[] = [];
@@ -269,3 +331,4 @@ recordBtn.addEventListener('click', async () => {
 
 // Resume audio context on first interaction
 document.addEventListener('click', () => engine.resume(), { once: true });
+document.addEventListener('touchstart', () => engine.resume(), { once: true, passive: true });

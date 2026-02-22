@@ -7,7 +7,9 @@ export class AudioEngine {
   private recordTap: MediaStreamAudioDestinationNode;
 
   constructor() {
-    this.ctx = new AudioContext();
+    this.ctx = new AudioContext({
+      latencyHint: 'interactive',
+    });
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = 1;
 
