@@ -34,7 +34,7 @@ export class MixerUI {
             <span class="center-track-meta" id="center-meta-A">-- BPM / Key --</span>
             <span class="center-track-time" id="center-time-A">0:00</span>
           </div>
-          <div class="center-divider-text">NEURAL MIX / CROSSFADE</div>
+          <div class="center-divider-text">NEURAL MIX</div>
           <div class="center-track center-track-b">
             <span class="center-track-time" id="center-time-B">0:00</span>
             <span class="center-track-meta" id="center-meta-B">-- BPM / Key --</span>
@@ -53,42 +53,44 @@ export class MixerUI {
           ${this.decks
             .map(
               (deck) => `
-            <div class="mixer-channel" data-deck="${deck.id}">
-              <div class="channel-head">
-                <span class="channel-label">${deck.id}</span>
-                <span class="channel-bpm" id="chan-bpm-${deck.id}">-- BPM</span>
-              </div>
+              <div class="mixer-channel" data-deck="${deck.id}">
+                <div class="channel-head">
+                  <span class="channel-label">${deck.id}</span>
+                  <span class="channel-bpm" id="chan-bpm-${deck.id}">-- BPM</span>
+                </div>
 
-              <div class="eq-group">
-                <div class="eq-knob-wrap"><label>HI</label><input type="range" class="eq-knob" id="eq-hi-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
-                <div class="eq-knob-wrap"><label>MID</label><input type="range" class="eq-knob" id="eq-mid-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
-                <div class="eq-knob-wrap"><label>LOW</label><input type="range" class="eq-knob" id="eq-lo-${deck.id}" min="-18" max="18" value="0" step="0.5"></div>
-                <div class="eq-knob-wrap"><label>FILTER</label><input type="range" class="eq-knob" id="filter-${deck.id}" min="-100" max="100" value="0" step="1"></div>
-              </div>
+                <div class="compact-row compact-row-4">
+                  <label class="compact-item">HI<input type="range" class="eq-knob" id="eq-hi-${deck.id}" min="-18" max="18" value="0" step="0.5"></label>
+                  <label class="compact-item">MID<input type="range" class="eq-knob" id="eq-mid-${deck.id}" min="-18" max="18" value="0" step="0.5"></label>
+                  <label class="compact-item">LOW<input type="range" class="eq-knob" id="eq-lo-${deck.id}" min="-18" max="18" value="0" step="0.5"></label>
+                  <label class="compact-item">FLT<input type="range" class="eq-knob" id="filter-${deck.id}" min="-100" max="100" value="0" step="1"></label>
+                </div>
 
-              <div class="stems-group">
-                <div class="stem-row"><label>DRM</label><input type="range" class="stem-slider" id="stem-drums-${deck.id}" min="0" max="100" value="100"></div>
-                <div class="stem-row"><label>INS</label><input type="range" class="stem-slider" id="stem-instruments-${deck.id}" min="0" max="100" value="100"></div>
-                <div class="stem-row"><label>VOC</label><input type="range" class="stem-slider" id="stem-vocals-${deck.id}" min="0" max="100" value="100"></div>
-              </div>
+                <div class="compact-row compact-row-3">
+                  <label class="compact-item">DRM<input type="range" class="stem-slider" id="stem-drums-${deck.id}" min="0" max="100" value="100"></label>
+                  <label class="compact-item">INS<input type="range" class="stem-slider" id="stem-instruments-${deck.id}" min="0" max="100" value="100"></label>
+                  <label class="compact-item">VOC<input type="range" class="stem-slider" id="stem-vocals-${deck.id}" min="0" max="100" value="100"></label>
+                </div>
 
-              <div class="fx-selector">
-                <div class="fx-knob-wrap"><label>ECHO</label><input type="range" class="fx-knob" id="fx-echo-${deck.id}" min="0" max="100" value="0"></div>
-                <div class="fx-knob-wrap"><label>RVB</label><input type="range" class="fx-knob" id="fx-reverb-${deck.id}" min="0" max="100" value="0"></div>
-                <div class="fx-knob-wrap"><label>FX FLT</label><input type="range" class="fx-knob" id="fx-filter-${deck.id}" min="0" max="100" value="0"></div>
-              </div>
+                <div class="compact-row compact-row-3">
+                  <label class="compact-item">ECHO<input type="range" class="fx-knob" id="fx-echo-${deck.id}" min="0" max="100" value="0"></label>
+                  <label class="compact-item">RVB<input type="range" class="fx-knob" id="fx-reverb-${deck.id}" min="0" max="100" value="0"></label>
+                  <label class="compact-item">FX FLT<input type="range" class="fx-knob" id="fx-filter-${deck.id}" min="0" max="100" value="0"></label>
+                </div>
 
-              <div class="neural-fx-row">
-                <button class="btn btn-neural-fx" id="nfx-vocal-echo-${deck.id}">VOCAL ECHO</button>
-                <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
-              </div>
+                <div class="channel-foot">
+                  <div class="neural-fx-row">
+                    <button class="btn btn-neural-fx" id="nfx-vocal-echo-${deck.id}">VOCAL ECHO</button>
+                    <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
+                  </div>
 
-              <div class="meter-fader-stack">
-                <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="92"></canvas>
-                <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical">
+                  <div class="meter-fader-stack">
+                    <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="86"></canvas>
+                    <input type="range" class="volume-fader" id="vol-${deck.id}" min="0" max="100" value="80" orient="vertical">
+                  </div>
+                </div>
               </div>
-            </div>
-          `,
+            `,
             )
             .join('')}
         </div>
@@ -306,7 +308,7 @@ export class MixerUI {
 
   private drawVU(ctx: CanvasRenderingContext2D, data: Uint8Array<ArrayBuffer>): void {
     const w = 24;
-    const h = 92;
+    const h = 86;
     ctx.clearRect(0, 0, w, h);
 
     let sum = 0;
@@ -316,9 +318,9 @@ export class MixerUI {
 
     const barH = level * h;
     const gradient = ctx.createLinearGradient(0, h, 0, 0);
-    gradient.addColorStop(0, '#1a9dc8');
-    gradient.addColorStop(0.7, '#8ee7ff');
-    gradient.addColorStop(1, '#d9fbff');
+    gradient.addColorStop(0, '#1491ba');
+    gradient.addColorStop(0.7, '#8ce6ff');
+    gradient.addColorStop(1, '#d6f9ff');
 
     ctx.fillStyle = 'rgba(255,255,255,0.07)';
     ctx.fillRect(0, 0, w, h);

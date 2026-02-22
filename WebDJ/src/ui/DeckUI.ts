@@ -20,6 +20,8 @@ export class DeckUI {
   private keyLabel!: HTMLElement;
   private keyLockBtn!: HTMLButtonElement;
   private cueButtons: HTMLButtonElement[] = [];
+  private cueBankButtons: HTMLButtonElement[] = [];
+  private cueBank = 0;
   private accentColor: string;
 
   constructor(container: HTMLElement, deck: Deck, accentColor: string) {
@@ -88,8 +90,12 @@ export class DeckUI {
                 .join('')}
             </div>
 
+            <div class="cue-bank-row">
+              ${Array.from({ length: 4 }, (_, i) => `<button class="btn cue-bank-btn ${i === 0 ? 'active' : ''}" id="cue-bank-${side}-${i}" title="Show cues ${i * 4 + 1}-${i * 4 + 4}">${i * 4 + 1}-${i * 4 + 4}</button>`).join('')}
+            </div>
+
             <div class="cue-points cue-grid" id="cue-grid-${side}">
-              ${Array.from({ length: 16 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1} (Shift+Click to set)">${i + 1}</button>`).join('')}
+              ${Array.from({ length: 4 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1} (Shift+Click to set)">${i + 1}</button>`).join('')}
             </div>
             <div class="deck-hint">Tap: jump/set cue. Shift+Tap: overwrite</div>
           </div>
@@ -121,7 +127,8 @@ export class DeckUI {
     this.keyLabel = this.el.querySelector(`#key-shift-label-${side}`)!;
     this.keyLockBtn = this.el.querySelector(`#key-lock-${side}`)!;
 
-    this.cueButtons = Array.from({ length: 16 }, (_, i) => this.el.querySelector(`#hot-cue-${side}-${i}`) as HTMLButtonElement);
+    this.cueButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#hot-cue-${side}-${i}`) as HTMLButtonElement);
+    this.cueBankButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#cue-bank-${side}-${i}`) as HTMLButtonElement);
   }
 
   private bind(): void {
@@ -149,13 +156,22 @@ export class DeckUI {
 
     this.cueButtons.forEach((btn, i) => {
       btn.addEventListener('click', (e) => {
+        const cueId = this.getCueId(i);
         if ((e as MouseEvent).shiftKey) {
-          this.deck.setCuePoint(i);
-        } else if (this.deck.cuePoints.find((c) => c.id === i)) {
-          this.deck.jumpToCue(i);
+          this.deck.setCuePoint(cueId);
+        } else if (this.deck.cuePoints.find((c) => c.id === cueId)) {
+          this.deck.jumpToCue(cueId);
         } else {
-          this.deck.setCuePoint(i);
+          this.deck.setCuePoint(cueId);
         }
+      });
+    });
+
+    this.cueBankButtons.forEach((btn, bank) => {
+      btn.addEventListener('click', () => {
+        this.cueBank = bank;
+        this.updateCueBankUI();
+        this.syncCueState();
       });
     });
 
@@ -232,6 +248,9 @@ export class DeckUI {
       this.updateMeta();
       this.keyLockBtn.classList.toggle('active', this.deck.keyLock);
     });
+
+    this.updateCueBankUI();
+    this.syncCueState();
   }
 
   private updateMeta(): void {
@@ -248,13 +267,25 @@ export class DeckUI {
 
   private syncCueState(): void {
     this.cueButtons.forEach((btn, i) => {
-      const cue = this.deck.cuePoints.find((c) => c.id === i);
+      const cueId = this.getCueId(i);
+      btn.textContent = `${cueId + 1}`;
+      const cue = this.deck.cuePoints.find((c) => c.id === cueId);
       if (cue) {
         btn.classList.add('active');
         btn.style.setProperty('--cue-color', cue.color);
       } else {
         btn.classList.remove('active');
       }
+    });
+  }
+
+  private getCueId(visibleSlot: number): number {
+    return this.cueBank * 4 + visibleSlot;
+  }
+
+  private updateCueBankUI(): void {
+    this.cueBankButtons.forEach((btn, idx) => {
+      btn.classList.toggle('active', idx === this.cueBank);
     });
   }
 
