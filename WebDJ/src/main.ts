@@ -152,6 +152,10 @@ const applyDeckMode = (): void => {
   root.classList.toggle('mode-2', deckMode === 2);
   root.classList.toggle('mode-4', deckMode === 4);
   deckModeBtn.textContent = deckMode === 2 ? '4 DECK' : '2 DECK';
+  const auxRow = document.getElementById('aux-row') as HTMLElement | null;
+  if (auxRow) {
+    auxRow.style.display = deckMode === 4 ? 'grid' : 'none';
+  }
 };
 
 const applyWaveformMode = (): void => {
@@ -174,7 +178,12 @@ const openFileImport = (): void => {
     libraryVisible = true;
     applyLibraryVisibility();
   }
-  window.dispatchEvent(new CustomEvent('library-open-picker'));
+  const picker = document.getElementById('file-picker') as HTMLInputElement | null;
+  if (picker) {
+    picker.click();
+  } else {
+    window.dispatchEvent(new CustomEvent('library-open-picker'));
+  }
   statusBadge.textContent = 'Choose audio files to import';
 };
 

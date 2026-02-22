@@ -37,7 +37,7 @@ export class LibraryUI {
           <div class="library-actions">
             <input type="text" class="search-input" id="search-input" placeholder="Search tracks...">
             <label class="btn btn-add-files" for="file-picker">+ Add Files</label>
-            <input type="file" id="file-picker" multiple accept="audio/*" style="display:none">
+            <input type="file" id="file-picker" class="file-picker-input" multiple accept="audio/*">
           </div>
         </div>
 
