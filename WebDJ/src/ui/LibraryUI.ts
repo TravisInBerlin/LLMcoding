@@ -29,7 +29,7 @@ export class LibraryUI {
       <div class="library-panel">
         <div class="library-header">
           <div class="library-left">
-            <span class="library-title">LIBRARY + MATCH</span>
+            <span class="library-title">LIBRARY</span>
             <span class="library-match" id="library-match">Match: load tracks to get suggestions.</span>
           </div>
           <div class="library-actions">
@@ -39,14 +39,26 @@ export class LibraryUI {
           </div>
         </div>
 
-        <div class="drop-zone" id="drop-zone">
-          <div class="drop-zone-inner">
-            <span class="drop-copy">Drop audio files here</span>
-            <span class="drop-subcopy">Supports iPad Files / local storage / drag & drop</span>
+        <div class="library-body">
+          <aside class="library-sidebar">
+            <button class="sidebar-item active">Library</button>
+            <button class="sidebar-item">History</button>
+            <button class="sidebar-item">Playlists</button>
+            <button class="sidebar-item">My Files</button>
+            <button class="sidebar-item">Downloaded</button>
+            <button class="sidebar-item">Neural Mix</button>
+          </aside>
+
+          <div class="library-content">
+            <div class="track-grid" id="track-list"></div>
+            <div class="drop-zone" id="drop-zone">
+              <div class="drop-zone-inner">
+                <span class="drop-copy">Drop audio files here</span>
+                <span class="drop-subcopy">Supports iPad Files / local storage / drag & drop</span>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="track-grid" id="track-list"></div>
       </div>
     `;
 

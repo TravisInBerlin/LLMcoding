@@ -147,7 +147,7 @@ if (isIPad) {
   statusBadge.textContent = 'iPad touch / low latency';
 }
 
-if (localStorage.getItem('webdj.guide.hidden') === '1') {
+if (localStorage.getItem('webdj.guide.hidden') !== '0') {
   guidePanel.classList.remove('active');
   guideToggleBtn.classList.remove('active');
 } else {
@@ -380,7 +380,7 @@ guideToggleBtn.addEventListener('click', () => {
     guideToggleBtn.classList.remove('active');
   } else {
     guidePanel.classList.add('active');
-    localStorage.removeItem('webdj.guide.hidden');
+    localStorage.setItem('webdj.guide.hidden', '0');
     guideToggleBtn.classList.add('active');
   }
 });

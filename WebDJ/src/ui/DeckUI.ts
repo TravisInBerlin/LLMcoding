@@ -38,28 +38,30 @@ export class DeckUI {
     const side = this.deck.id;
     this.el.innerHTML = `
       <div class="deck-surface deck-${side.toLowerCase()}">
-        <div class="deck-topbar">
-          <div class="deck-identity">
-            <span class="deck-label" style="color:${this.accentColor}">DECK ${side}</span>
-            <span class="deck-track-name" id="track-${side}">No Track Loaded</span>
+        <div class="deck-strip">
+          <div class="deck-strip-art">${side}</div>
+          <div class="deck-strip-main">
+            <div class="deck-strip-title-row">
+              <span class="deck-strip-label" style="color:${this.accentColor}">DECK ${side}</span>
+              <span class="deck-strip-title" id="track-${side}">No Track Loaded</span>
+            </div>
+            <div class="deck-strip-meta-row">
+              <span class="deck-time" id="time-${side}">0:00 / 0:00</span>
+              <span class="deck-bpm" id="bpm-${side}">-- BPM</span>
+              <span class="deck-key" id="key-${side}">Key: --</span>
+              <span class="deck-stem-mode" id="stem-mode-${side}">Neural: --</span>
+            </div>
           </div>
           <button class="btn btn-mini" id="key-lock-${side}">KEY LOCK</button>
         </div>
 
-        <div class="deck-wave-strip-wrap">
-          <canvas class="waveform-canvas deck-wave-strip" id="waveform-${side}"></canvas>
-          <div class="deck-info-row">
-            <span class="deck-time" id="time-${side}">0:00 / 0:00</span>
-            <span class="deck-bpm" id="bpm-${side}">-- BPM</span>
-            <span class="deck-key" id="key-${side}">Key: --</span>
-            <span class="deck-stem-mode" id="stem-mode-${side}">Neural: --</span>
-          </div>
-          <div class="deck-neural-progress">
-            <div class="deck-neural-progress-bar" id="stem-progress-${side}"></div>
-          </div>
+        <canvas class="waveform-canvas deck-wave-strip" id="waveform-${side}"></canvas>
+
+        <div class="deck-neural-progress">
+          <div class="deck-neural-progress-bar" id="stem-progress-${side}"></div>
         </div>
 
-        <div class="deck-performance">
+        <div class="deck-main">
           <div class="jog-zone">
             <div class="jog-wheel" id="jog-${side}">
               <div class="jog-dot"></div>
@@ -68,7 +70,7 @@ export class DeckUI {
             <div class="platter-label">DISC</div>
           </div>
 
-          <div class="deck-action-grid">
+          <div class="deck-controls-stack">
             <div class="transport-row">
               <button class="btn btn-cue" id="cue-btn-${side}" title="Return to cue">CUE</button>
               <button class="btn btn-play" id="play-btn-${side}" title="Play/Pause">▶</button>
@@ -81,17 +83,15 @@ export class DeckUI {
               <button class="btn btn-loop" id="loop-out-${side}" title="Set loop out">OUT</button>
               <button class="btn btn-loop-toggle" id="loop-toggle-${side}" title="Toggle loop">LOOP</button>
               <button class="btn btn-loop" id="loop-save-${side}" title="Save loop">SAVE</button>
-            </div>
-
-            <div class="auto-loop-row">
-              ${[1, 2, 4, 8, 16].map((b) => `<button class="btn btn-auto-loop" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`).join('')}
+              ${[1, 2, 4, 8, 16]
+                .map((b) => `<button class="btn btn-auto-loop" id="loop-${side}-${b}" title="${b} beat loop">${b}B</button>`)
+                .join('')}
             </div>
 
             <div class="cue-points cue-grid" id="cue-grid-${side}">
               ${Array.from({ length: 16 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1} (Shift+Click to set)">${i + 1}</button>`).join('')}
             </div>
-
-            <div class="deck-hint">Tap: jump / set, Shift+Tap: overwrite cue</div>
+            <div class="deck-hint">Tap: jump/set cue. Shift+Tap: overwrite</div>
           </div>
 
           <div class="pitch-control">
@@ -190,13 +190,11 @@ export class DeckUI {
     });
 
     this.el.querySelector(`#sync-btn-${side}`)!.addEventListener('click', () => {
-      const event = new CustomEvent('sync-request', { detail: { deckId: side } });
-      window.dispatchEvent(event);
+      window.dispatchEvent(new CustomEvent('sync-request', { detail: { deckId: side } }));
     });
 
     this.el.querySelector(`#key-match-${side}`)!.addEventListener('click', () => {
-      const event = new CustomEvent('keymatch-request', { detail: { deckId: side } });
-      window.dispatchEvent(event);
+      window.dispatchEvent(new CustomEvent('keymatch-request', { detail: { deckId: side } }));
     });
 
     this.setupJogWheel();
