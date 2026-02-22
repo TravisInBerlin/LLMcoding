@@ -147,9 +147,11 @@ if (isIPad) {
 }
 
 if (localStorage.getItem('webdj.quickstart.hidden') === '1') {
-  quickStartEl.style.display = 'none';
+  quickStartEl.classList.remove('active');
+} else {
+  quickStartEl.classList.add('active');
 }
-guideToggleBtn.classList.toggle('active', quickStartEl.style.display !== 'none');
+guideToggleBtn.classList.toggle('active', quickStartEl.classList.contains('active'));
 
 // Sync requests
 window.addEventListener(
@@ -377,19 +379,19 @@ mixerToggleBtn.addEventListener('click', () => {
 });
 
 quickStartCloseBtn.addEventListener('click', () => {
-  quickStartEl.style.display = 'none';
+  quickStartEl.classList.remove('active');
   localStorage.setItem('webdj.quickstart.hidden', '1');
   guideToggleBtn.classList.remove('active');
 });
 
 guideToggleBtn.addEventListener('click', () => {
-  const visible = quickStartEl.style.display !== 'none';
+  const visible = quickStartEl.classList.contains('active');
   if (visible) {
-    quickStartEl.style.display = 'none';
+    quickStartEl.classList.remove('active');
     localStorage.setItem('webdj.quickstart.hidden', '1');
     guideToggleBtn.classList.remove('active');
   } else {
-    quickStartEl.style.display = '';
+    quickStartEl.classList.add('active');
     localStorage.removeItem('webdj.quickstart.hidden');
     guideToggleBtn.classList.add('active');
   }
