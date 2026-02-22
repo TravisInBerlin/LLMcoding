@@ -55,22 +55,22 @@ export class MixerUI {
                 </div>
 
                 <div class="compact-row compact-row-4">
-                  <label class="compact-item">HI<input type="range" class="eq-knob" id="eq-hi-${deck.id}" min="-18" max="18" value="0" step="0.5"></label>
-                  <label class="compact-item">MID<input type="range" class="eq-knob" id="eq-mid-${deck.id}" min="-18" max="18" value="0" step="0.5"></label>
-                  <label class="compact-item">LOW<input type="range" class="eq-knob" id="eq-lo-${deck.id}" min="-18" max="18" value="0" step="0.5"></label>
-                  <label class="compact-item">FLT<input type="range" class="eq-knob" id="filter-${deck.id}" min="-100" max="100" value="0" step="1"></label>
+                  <div class="compact-item"><span>HI</span><button class="mixer-knob" id="eq-hi-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item"><span>MID</span><button class="mixer-knob" id="eq-mid-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item"><span>LOW</span><button class="mixer-knob" id="eq-lo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item"><span>FLT</span><button class="mixer-knob" id="filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
                 </div>
 
                 <div class="compact-row compact-row-3">
-                  <label class="compact-item">DRM<input type="range" class="stem-slider" id="stem-drums-${deck.id}" min="0" max="100" value="100"></label>
-                  <label class="compact-item">INS<input type="range" class="stem-slider" id="stem-instruments-${deck.id}" min="0" max="100" value="100"></label>
-                  <label class="compact-item">VOC<input type="range" class="stem-slider" id="stem-vocals-${deck.id}" min="0" max="100" value="100"></label>
+                  <div class="compact-item"><span>DRM</span><button class="mixer-knob" id="stem-drums-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item"><span>INS</span><button class="mixer-knob" id="stem-instruments-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item"><span>VOC</span><button class="mixer-knob" id="stem-vocals-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
                 </div>
 
                 <div class="compact-row compact-row-3">
-                  <label class="compact-item">ECHO<input type="range" class="fx-knob" id="fx-echo-${deck.id}" min="0" max="100" value="0"></label>
-                  <label class="compact-item">RVB<input type="range" class="fx-knob" id="fx-reverb-${deck.id}" min="0" max="100" value="0"></label>
-                  <label class="compact-item">FX FLT<input type="range" class="fx-knob" id="fx-filter-${deck.id}" min="0" max="100" value="0"></label>
+                  <div class="compact-item"><span>ECHO</span><button class="mixer-knob" id="fx-echo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item"><span>RVB</span><button class="mixer-knob" id="fx-reverb-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
+                  <div class="compact-item"><span>FX FLT</span><button class="mixer-knob" id="fx-filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button></div>
                 </div>
 
                 <div class="channel-foot">
@@ -176,62 +176,190 @@ export class MixerUI {
   }
 
   private bindEQ(deck: Deck): void {
-    const hiSlider = this.el.querySelector(`#eq-hi-${deck.id}`) as HTMLInputElement;
-    const midSlider = this.el.querySelector(`#eq-mid-${deck.id}`) as HTMLInputElement;
-    const loSlider = this.el.querySelector(`#eq-lo-${deck.id}`) as HTMLInputElement;
-    const filterSlider = this.el.querySelector(`#filter-${deck.id}`) as HTMLInputElement;
+    const hiKnob = this.el.querySelector(`#eq-hi-${deck.id}`) as HTMLElement;
+    const midKnob = this.el.querySelector(`#eq-mid-${deck.id}`) as HTMLElement;
+    const loKnob = this.el.querySelector(`#eq-lo-${deck.id}`) as HTMLElement;
+    const filterKnob = this.el.querySelector(`#filter-${deck.id}`) as HTMLElement;
 
-    hiSlider.addEventListener('input', () => {
-      deck.eqHigh.gain.value = parseFloat(hiSlider.value);
-    });
-    midSlider.addEventListener('input', () => {
-      deck.eqMid.gain.value = parseFloat(midSlider.value);
-    });
-    loSlider.addEventListener('input', () => {
-      deck.eqLow.gain.value = parseFloat(loSlider.value);
-    });
-    filterSlider.addEventListener('input', () => {
-      deck.setFilterBlend(parseFloat(filterSlider.value) / 100);
+    this.bindMixerKnob(hiKnob, {
+      get: () => deck.eqHigh.gain.value,
+      set: (v) => {
+        deck.eqHigh.gain.value = v;
+      },
+      min: -18,
+      max: 18,
+      step: 0.5,
+      reset: 0,
     });
 
-    [hiSlider, midSlider, loSlider, filterSlider].forEach((slider) => {
-      slider.addEventListener('dblclick', () => {
-        slider.value = '0';
-        slider.dispatchEvent(new Event('input'));
-      });
+    this.bindMixerKnob(midKnob, {
+      get: () => deck.eqMid.gain.value,
+      set: (v) => {
+        deck.eqMid.gain.value = v;
+      },
+      min: -18,
+      max: 18,
+      step: 0.5,
+      reset: 0,
+    });
+
+    this.bindMixerKnob(loKnob, {
+      get: () => deck.eqLow.gain.value,
+      set: (v) => {
+        deck.eqLow.gain.value = v;
+      },
+      min: -18,
+      max: 18,
+      step: 0.5,
+      reset: 0,
+    });
+
+    let filterValue = 0;
+    this.bindMixerKnob(filterKnob, {
+      get: () => filterValue,
+      set: (v) => {
+        filterValue = v;
+        deck.setFilterBlend(v / 100);
+      },
+      min: -100,
+      max: 100,
+      step: 1,
+      reset: 0,
     });
   }
 
   private bindFX(deck: Deck): void {
-    const echoSlider = this.el.querySelector(`#fx-echo-${deck.id}`) as HTMLInputElement;
-    const reverbSlider = this.el.querySelector(`#fx-reverb-${deck.id}`) as HTMLInputElement;
-    const filterSlider = this.el.querySelector(`#fx-filter-${deck.id}`) as HTMLInputElement;
+    const echoKnob = this.el.querySelector(`#fx-echo-${deck.id}`) as HTMLElement;
+    const reverbKnob = this.el.querySelector(`#fx-reverb-${deck.id}`) as HTMLElement;
+    const filterKnob = this.el.querySelector(`#fx-filter-${deck.id}`) as HTMLElement;
 
-    echoSlider.addEventListener('input', () => {
-      deck.effects[0].setWet(parseFloat(echoSlider.value) / 100);
+    let echoValue = 0;
+    this.bindMixerKnob(echoKnob, {
+      get: () => echoValue,
+      set: (v) => {
+        echoValue = v;
+        deck.effects[0].setWet(v / 100);
+      },
+      min: 0,
+      max: 100,
+      step: 1,
+      reset: 0,
     });
-    reverbSlider.addEventListener('input', () => {
-      deck.effects[1].setWet(parseFloat(reverbSlider.value) / 100);
+
+    let reverbValue = 0;
+    this.bindMixerKnob(reverbKnob, {
+      get: () => reverbValue,
+      set: (v) => {
+        reverbValue = v;
+        deck.effects[1].setWet(v / 100);
+      },
+      min: 0,
+      max: 100,
+      step: 1,
+      reset: 0,
     });
-    filterSlider.addEventListener('input', () => {
-      deck.effects[2].setWet(parseFloat(filterSlider.value) / 100);
+
+    let fxFilterValue = 0;
+    this.bindMixerKnob(filterKnob, {
+      get: () => fxFilterValue,
+      set: (v) => {
+        fxFilterValue = v;
+        deck.effects[2].setWet(v / 100);
+      },
+      min: 0,
+      max: 100,
+      step: 1,
+      reset: 0,
     });
   }
 
   private bindStems(deck: Deck): void {
     const stemIds: StemName[] = ['drums', 'instruments', 'vocals'];
     stemIds.forEach((stem) => {
-      const slider = this.el.querySelector(`#stem-${stem}-${deck.id}`) as HTMLInputElement;
-      slider.addEventListener('input', () => {
-        deck.setStemLevel(stem, parseFloat(slider.value) / 100);
-      });
-
-      slider.addEventListener('dblclick', () => {
-        const next = parseFloat(slider.value) > 0 ? 0 : 100;
-        slider.value = `${next}`;
-        slider.dispatchEvent(new Event('input'));
+      const knob = this.el.querySelector(`#stem-${stem}-${deck.id}`) as HTMLElement;
+      this.bindMixerKnob(knob, {
+        get: () => deck.getStemLevel(stem) * 100,
+        set: (v) => {
+          deck.setStemLevel(stem, v / 100);
+        },
+        min: 0,
+        max: 100,
+        step: 1,
+        reset: 100,
       });
     });
+  }
+
+  private bindMixerKnob(
+    el: HTMLElement,
+    opts: {
+      get: () => number;
+      set: (next: number) => void;
+      min: number;
+      max: number;
+      step: number;
+      reset: number;
+    },
+  ): void {
+    const { get, set, min, max, step, reset } = opts;
+    let dragging = false;
+    let pointerId: number | null = null;
+    let startY = 0;
+    let startValue = 0;
+    const sensitivity = (max - min) / 200;
+
+    const apply = (raw: number): void => {
+      const snapped = Math.round(raw / step) * step;
+      const next = this.clamp(snapped, min, max);
+      set(next);
+      this.setMixerKnobAngle(el, next, min, max);
+    };
+
+    this.setMixerKnobAngle(el, get(), min, max);
+
+    el.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      pointerId = e.pointerId;
+      startY = e.clientY;
+      startValue = get();
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging || pointerId !== e.pointerId) return;
+      const delta = startY - e.clientY;
+      apply(startValue + delta * sensitivity);
+    });
+
+    const stop = (e: PointerEvent) => {
+      if (pointerId !== e.pointerId) return;
+      dragging = false;
+      pointerId = null;
+    };
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+
+    el.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const direction = e.deltaY < 0 ? 1 : -1;
+      apply(get() + direction * step);
+    });
+
+    el.addEventListener('dblclick', () => {
+      apply(reset);
+    });
+  }
+
+  private setMixerKnobAngle(el: HTMLElement, value: number, min: number, max: number): void {
+    const normalized = (value - min) / (max - min);
+    const clamped = Math.max(0, Math.min(1, normalized));
+    const deg = -140 + clamped * 280;
+    el.style.setProperty('--knob-angle', `${deg}deg`);
+  }
+
+  private clamp(v: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, v));
   }
 
   private bindNeuralFX(deck: Deck): void {
