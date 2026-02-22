@@ -44,8 +44,9 @@ export class DeckUI {
 
   private render(): void {
     const side = this.deck.id;
+    const deckLayoutClass = side === 'B' || side === 'D' ? ' deck-right-layout' : '';
     this.el.innerHTML = `
-      <div class="deck-surface deck-${side.toLowerCase()}" style="--deck-accent:${this.accentColor};">
+      <div class="deck-surface deck-${side.toLowerCase()}${deckLayoutClass}" style="--deck-accent:${this.accentColor};">
         <div class="deck-strip">
           <div class="deck-strip-art">${side}</div>
           <div class="deck-strip-main">
@@ -76,7 +77,6 @@ export class DeckUI {
               <div class="jog-wheel" id="jog-${side}">
                 <div class="vinyl-grooves"></div>
                 <div class="vinyl-center">
-                  <div class="vinyl-spindle"></div>
                 </div>
                 <div class="vinyl-text" id="vinyl-text-${side}">${side}</div>
                 <div class="vinyl-highlight"></div>
@@ -89,24 +89,26 @@ export class DeckUI {
             <div class="control-group">
               <div class="control-label">TRANSPORT</div>
               <div class="transport-row">
-                <button class="btn btn-cue" id="cue-btn-${side}" title="Return to track start cue">CUE</button>
-                <button class="btn btn-play" id="play-btn-${side}" title="Play / Pause">▶</button>
-                <button class="btn btn-mini btn-sync" id="sync-btn-${side}" title="Match BPM to opposite deck">SYNC</button>
-                <button class="btn btn-mini btn-key" id="key-match-${side}" title="Match key to opposite deck">KEY MATCH</button>
+                <button class="btn btn-cue" id="cue-btn-${side}" title="先頭キューへ戻る">CUE</button>
+                <button class="btn btn-play" id="play-btn-${side}" title="再生 / 停止">▶</button>
+                <button class="btn btn-mini btn-sync" id="sync-btn-${side}" title="反対デッキにBPM同期">SYNC</button>
+                <button class="btn btn-mini btn-key" id="key-match-${side}" title="反対デッキにキー同期">KEY MATCH</button>
               </div>
+              <div class="control-explain">CUE: 頭出し / PLAY: 再生停止 / SYNC: BPM合わせ / KEY MATCH: キー合わせ</div>
             </div>
 
             <div class="control-group">
               <div class="control-label">LOOP</div>
               <div class="loop-controls">
-                <button class="btn btn-loop btn-muted" id="loop-in-${side}" title="Set loop start">IN</button>
-                <button class="btn btn-loop btn-muted" id="loop-out-${side}" title="Set loop end">OUT</button>
-                <button class="btn btn-loop-toggle btn-muted" id="loop-toggle-${side}" title="Enable / disable loop">LOOP</button>
-                <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="Save current loop">SAVE</button>
+                <button class="btn btn-loop btn-muted" id="loop-in-${side}" title="ループ開始点 ON / OFF">IN</button>
+                <button class="btn btn-loop btn-muted" id="loop-out-${side}" title="ループ終了点 ON / OFF">OUT</button>
+                <button class="btn btn-loop-toggle btn-muted" id="loop-toggle-${side}" title="ループ有効 ON / OFF">LOOP</button>
+                <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="現在のループを保存">SAVE</button>
                 ${[1, 2, 4, 8, 16]
           .map((b) => `<button class="btn btn-auto-loop btn-muted" id="loop-${side}-${b}" title="${b} beat auto loop (tap again to OFF)">${b}B</button>`)
           .join('')}
               </div>
+              <div class="control-explain">IN/OUT/LOOP: 再クリックでOFF / 1B-16B: 長さ指定オートループ</div>
             </div>
 
             <div class="control-group">
@@ -117,19 +119,19 @@ export class DeckUI {
               <div class="cue-points cue-grid" id="cue-grid-${side}">
                 ${Array.from({ length: 4 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Tap: ON/OFF cue point">${i + 1}</button>`).join('')}
               </div>
-              <div class="deck-hint">Cue pads: tap once ON, tap again OFF</div>
+              <div class="control-explain">Hot Cue: タップ1回でセット、もう1回で解除</div>
             </div>
           </div>
 
           <div class="pitch-control">
             <div class="slider-column">
-              <div class="slider-role">TEMPO</div>
+              <div class="slider-role">TEMPO (速度)</div>
               <label class="pitch-label" id="pitch-label-${side}">+0.0%</label>
               <input type="range" class="pitch-slider" id="pitch-${side}" min="-75" max="75" value="0" orient="vertical" aria-label="Tempo">
             </div>
             <div class="slider-column">
-              <div class="slider-role">KEY SHIFT</div>
-              <label class="pitch-label" id="key-shift-label-${side}">KEY +0</label>
+              <div class="slider-role">KEY SHIFT (半音)</div>
+              <label class="pitch-label" id="key-shift-label-${side}">KEY +0 st</label>
               <input type="range" class="pitch-slider" id="key-shift-${side}" min="-12" max="12" value="0" orient="vertical" aria-label="Key Shift">
             </div>
           </div>
@@ -175,9 +177,33 @@ export class DeckUI {
       this.deck.seek(0);
     });
 
-    this.loopInBtn.addEventListener('click', () => this.deck.setLoopIn());
-    this.loopOutBtn.addEventListener('click', () => this.deck.setLoopOut());
-    this.loopToggleBtn.addEventListener('click', () => this.deck.toggleLoop());
+    this.loopInBtn.addEventListener('click', () => {
+      if (this.deck.loopIn >= 0) {
+        this.deck.clearLoopIn();
+      } else {
+        this.deck.setLoopIn();
+      }
+    });
+    this.loopOutBtn.addEventListener('click', () => {
+      if (this.deck.loopOut > this.deck.loopIn && this.deck.loopOut >= 0) {
+        this.deck.clearLoopOut();
+      } else {
+        this.deck.setLoopOut();
+      }
+    });
+    this.loopToggleBtn.addEventListener('click', () => {
+      if (this.deck.loopActive) {
+        this.deck.toggleLoop(false);
+        return;
+      }
+
+      const hasRange = this.deck.loopIn >= 0 && this.deck.loopOut > this.deck.loopIn;
+      if (hasRange) {
+        this.deck.toggleLoop(true);
+      } else {
+        this.deck.setAutoLoop(4);
+      }
+    });
 
     this.el.querySelector(`#loop-save-${side}`)!.addEventListener('click', () => {
       this.deck.saveCurrentLoop(0, 4);
@@ -227,13 +253,13 @@ export class DeckUI {
       const semi = parseFloat(this.keySlider.value);
       this.deck.keySemitone = semi;
       const sign = semi >= 0 ? '+' : '';
-      this.keyLabel.textContent = `KEY ${sign}${Math.round(semi)}`;
+      this.keyLabel.textContent = `KEY ${sign}${Math.round(semi)} st`;
     });
 
     this.keySlider.addEventListener('dblclick', () => {
       this.keySlider.value = '0';
       this.deck.keySemitone = 0;
-      this.keyLabel.textContent = 'KEY +0';
+      this.keyLabel.textContent = 'KEY +0 st';
     });
 
     this.keyLockBtn.addEventListener('click', () => {
@@ -326,12 +352,14 @@ export class DeckUI {
 
   private syncLoopState(): void {
     const hasLoopIn = this.deck.loopIn >= 0;
-    const hasLoopOut = this.deck.loopOut > this.deck.loopIn;
+    const hasLoopOut = this.deck.loopOut >= 0;
     const loopOn = this.deck.loopActive;
 
     this.loopInBtn.classList.toggle('active', hasLoopIn);
     this.loopOutBtn.classList.toggle('active', hasLoopOut);
     this.loopToggleBtn.classList.toggle('active', loopOn);
+    this.loopInBtn.setAttribute('aria-pressed', String(hasLoopIn));
+    this.loopOutBtn.setAttribute('aria-pressed', String(hasLoopOut));
     this.loopToggleBtn.setAttribute('aria-pressed', String(loopOn));
 
     this.autoLoopButtons.forEach((btn, beats) => {

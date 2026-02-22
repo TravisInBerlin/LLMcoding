@@ -438,12 +438,26 @@ export class Deck {
     this.emit('statechange');
   }
 
+  clearLoopIn(): void {
+    this.loopIn = -1;
+    this.autoLoopBeats = null;
+    this.loopActive = false;
+    this.emit('statechange');
+  }
+
   setLoopOut(): void {
     this.loopOut = this.currentTime;
     this.autoLoopBeats = null;
     if (this.loopIn >= 0 && this.loopIn < this.loopOut) {
       this.loopActive = true;
     }
+    this.emit('statechange');
+  }
+
+  clearLoopOut(): void {
+    this.loopOut = -1;
+    this.autoLoopBeats = null;
+    this.loopActive = false;
     this.emit('statechange');
   }
 

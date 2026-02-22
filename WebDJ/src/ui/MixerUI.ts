@@ -1,6 +1,5 @@
 import { Deck, type DeckId, type StemName } from '../audio/Deck';
 import { Crossfader } from '../audio/Crossfader';
-import { Waveform } from '../visualizer/Waveform';
 
 export class MixerUI {
   private decks: Deck[];
@@ -11,8 +10,6 @@ export class MixerUI {
   private centerMetaEls = new Map<DeckId, HTMLElement>();
   private centerTimeEls = new Map<DeckId, HTMLElement>();
   private channelBpmEls = new Map<DeckId, HTMLElement>();
-  private waveA: Waveform | null = null;
-  private waveB: Waveform | null = null;
 
   constructor(container: HTMLElement, decks: Deck[], crossfader: Crossfader) {
     this.decks = decks;
@@ -43,16 +40,10 @@ export class MixerUI {
           </div>
         </div>
 
-        <div class="center-wave-stack">
-          <canvas class="center-waveform" id="center-wave-A"></canvas>
-          <div class="center-wave-midline"></div>
-          <canvas class="center-waveform" id="center-wave-B"></canvas>
-        </div>
-
         <div class="mixer-channels">
           ${this.decks
-            .map(
-              (deck) => `
+        .map(
+          (deck) => `
               <div class="mixer-channel" data-deck="${deck.id}">
                 <div class="channel-head">
                   <span class="channel-label">${deck.id}</span>
@@ -91,8 +82,8 @@ export class MixerUI {
                 </div>
               </div>
             `,
-            )
-            .join('')}
+        )
+        .join('')}
         </div>
 
         <div class="crossfader-section">
@@ -109,20 +100,6 @@ export class MixerUI {
       this.vuMap.set(deck.id, { canvas, ctx });
       this.channelBpmEls.set(deck.id, this.el.querySelector(`#chan-bpm-${deck.id}`) as HTMLElement);
     });
-
-    const deckA = this.decks.find((d) => d.id === 'A');
-    const deckB = this.decks.find((d) => d.id === 'B');
-    const waveCanvasA = this.el.querySelector('#center-wave-A') as HTMLCanvasElement;
-    const waveCanvasB = this.el.querySelector('#center-wave-B') as HTMLCanvasElement;
-
-    if (deckA) {
-      this.waveA = new Waveform(waveCanvasA, deckA, '#2bd4ff');
-      this.waveA.setMode('vertical');
-    }
-    if (deckB) {
-      this.waveB = new Waveform(waveCanvasB, deckB, '#ff5a99');
-      this.waveB.setMode('vertical');
-    }
 
     (['A', 'B'] as DeckId[]).forEach((id) => {
       this.centerTrackEls.set(id, this.el.querySelector(`#center-track-${id}`) as HTMLElement);
