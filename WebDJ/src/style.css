@@ -228,10 +228,10 @@ body {
 .deck-panel {
   height: 100%;
   min-height: 0;
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.38);
 }
 
@@ -273,7 +273,7 @@ body {
 
 .waveform-canvas {
   width: 100%;
-  height: 92px;
+  height: 100px;
   border-radius: var(--r-md);
   border: 1px solid var(--line);
   cursor: pointer;
@@ -317,8 +317,8 @@ body {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: 100px 1fr 56px;
-  gap: 10px;
+  grid-template-columns: 86px 1fr 46px;
+  gap: 8px;
 }
 
 .jog-container {
@@ -328,8 +328,8 @@ body {
 }
 
 .jog-wheel {
-  width: 96px;
-  height: 96px;
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
   border: 1px solid var(--line-strong);
   background: radial-gradient(circle at 30% 20%, rgba(138, 167, 245, 0.6), rgba(9, 14, 30, 0.93));
@@ -365,23 +365,53 @@ body {
 .transport-controls {
   min-width: 0;
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
-  gap: 6px;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 5px;
 }
 
 .transport-row,
 .loop-controls,
 .auto-loop-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
+}
+
+.control-section {
+  border: 1px solid rgba(162, 184, 240, 0.2);
+  border-radius: 8px;
+  padding: 4px 5px;
+  background: rgba(4, 10, 24, 0.38);
+}
+
+.section-title {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: rgba(202, 219, 255, 0.68);
+  margin-bottom: 3px;
+}
+
+.transport-strip .btn {
+  min-width: 58px;
 }
 
 .cue-grid {
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.pad-section {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.pad-help {
+  margin-top: 3px;
+  font-size: 9px;
+  color: rgba(192, 210, 252, 0.55);
 }
 
 .pitch-control {
@@ -389,7 +419,7 @@ body {
   grid-template-rows: auto 1fr auto 1fr;
   align-items: center;
   justify-items: center;
-  gap: 5px;
+  gap: 3px;
 }
 
 .pitch-label {
@@ -409,8 +439,8 @@ body {
 }
 
 .pitch-slider {
-  width: 8px;
-  height: 66px;
+  width: 7px;
+  height: 58px;
 }
 
 .volume-fader {
@@ -442,8 +472,8 @@ body {
   background: linear-gradient(180deg, rgba(191, 213, 255, 0.14), rgba(112, 145, 218, 0.08));
   color: var(--text);
   border-radius: var(--r-sm);
-  padding: 4px 8px;
-  font-size: 10px;
+  padding: 3px 7px;
+  font-size: 9px;
   letter-spacing: 0.3px;
   font-weight: 600;
   cursor: pointer;
@@ -471,9 +501,9 @@ body {
 }
 
 .btn-play {
-  min-width: 44px;
-  min-height: 30px;
-  font-size: 15px;
+  min-width: 40px;
+  min-height: 28px;
+  font-size: 13px;
 }
 
 .btn-play.playing {
@@ -482,8 +512,8 @@ body {
 
 .btn-hot-cue {
   padding: 0;
-  min-height: 24px;
-  font-size: 9px;
+  min-height: 20px;
+  font-size: 10px;
 }
 
 .btn-hot-cue.active {
@@ -504,7 +534,7 @@ body {
 .mixer-panel {
   height: 100%;
   min-height: 0;
-  padding: 10px;
+  padding: 8px;
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 8px;
@@ -522,7 +552,7 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: 6px;
   overflow: auto;
 }
 
@@ -533,11 +563,20 @@ body {
 .mixer-channel {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  padding: 7px;
+  padding: 5px;
   background: var(--panel-2);
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr;
-  gap: 6px;
+  grid-template-columns: 1fr 16px;
+  grid-template-rows: auto auto auto auto 1fr auto;
+  gap: 4px;
+}
+
+.mixer-channel > .channel-label,
+.mixer-channel > .eq-group,
+.mixer-channel > .stems-group,
+.mixer-channel > .fx-selector,
+.mixer-channel > .neural-fx-row {
+  grid-column: 1;
 }
 
 .channel-label {
@@ -549,13 +588,13 @@ body {
 .fx-selector,
 .stems-group {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .neural-fx-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 3px;
 }
 
 .btn-neural-fx {
@@ -567,15 +606,15 @@ body {
 .fx-knob-wrap,
 .stem-row {
   display: grid;
-  grid-template-columns: 40px 1fr;
-  gap: 4px;
+  grid-template-columns: 32px 1fr;
+  gap: 3px;
   align-items: center;
 }
 
 .eq-knob-wrap label,
 .fx-knob-wrap label,
 .stem-row label {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-dim);
 }
 
@@ -602,11 +641,19 @@ body {
 }
 
 .vu-meter {
-  width: 24px;
-  height: 120px;
+  width: 14px;
+  height: 96px;
   border-radius: 5px;
   border: 1px solid var(--line);
-  justify-self: center;
+  justify-self: end;
+  grid-column: 2;
+  grid-row: 2 / span 4;
+}
+
+.volume-fader {
+  grid-column: 2;
+  grid-row: 6;
+  justify-self: end;
 }
 
 .crossfader-section {

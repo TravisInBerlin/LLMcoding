@@ -65,24 +65,40 @@ export class DeckUI {
             </div>
           </div>
 
-          <div class="transport-controls">
-            <div class="transport-row">
-              <button class="btn btn-cue" id="cue-btn-${side}" title="Cue">CUE</button>
-              <button class="btn btn-play" id="play-btn-${side}" title="Play/Pause">▶</button>
-              <button class="btn btn-mini" id="sync-btn-${side}" title="Sync tempo">SYNC</button>
-              <button class="btn btn-mini" id="key-match-${side}" title="Match key">KEY MATCH</button>
+          <div class="transport-controls performance-layout">
+            <div class="control-section">
+              <div class="section-title">TRANSPORT</div>
+              <div class="transport-row transport-strip">
+                <button class="btn btn-cue" id="cue-btn-${side}" title="Return to start cue">CUE</button>
+                <button class="btn btn-play" id="play-btn-${side}" title="Play/Pause">▶</button>
+                <button class="btn btn-mini" id="sync-btn-${side}" title="Sync tempo to opposite deck">SYNC</button>
+                <button class="btn btn-mini" id="key-match-${side}" title="Match harmonic key">KEY MATCH</button>
+              </div>
             </div>
-            <div class="loop-controls">
-              <button class="btn btn-loop" id="loop-in-${side}">IN</button>
-              <button class="btn btn-loop" id="loop-out-${side}">OUT</button>
-              <button class="btn btn-loop-toggle" id="loop-toggle-${side}">LOOP</button>
-              <button class="btn btn-loop" id="loop-save-${side}">SAVE</button>
+
+            <div class="control-section">
+              <div class="section-title">LOOP</div>
+              <div class="loop-controls">
+                <button class="btn btn-loop" id="loop-in-${side}" title="Set loop start">IN</button>
+                <button class="btn btn-loop" id="loop-out-${side}" title="Set loop end">OUT</button>
+                <button class="btn btn-loop-toggle" id="loop-toggle-${side}" title="Enable/disable loop">LOOP</button>
+                <button class="btn btn-loop" id="loop-save-${side}" title="Save current loop">SAVE</button>
+              </div>
             </div>
-            <div class="auto-loop-row">
-              ${[1, 2, 4, 8, 16].map((b) => `<button class="btn btn-auto-loop" id="loop-${side}-${b}">${b}B</button>`).join('')}
+
+            <div class="control-section">
+              <div class="section-title">AUTO LOOP</div>
+              <div class="auto-loop-row">
+                ${[1, 2, 4, 8, 16].map((b) => `<button class="btn btn-auto-loop" id="loop-${side}-${b}" title="Create ${b} beat auto-loop">${b}B</button>`).join('')}
+              </div>
             </div>
-            <div class="cue-points cue-grid" id="cue-grid-${side}">
-              ${Array.from({ length: 16 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1}">${i + 1}</button>`).join('')}
+
+            <div class="control-section pad-section">
+              <div class="section-title">PERFORMANCE PADS</div>
+              <div class="cue-points cue-grid" id="cue-grid-${side}">
+                ${Array.from({ length: 16 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Hot Cue ${i + 1} (Shift+Click to set)">${i + 1}</button>`).join('')}
+              </div>
+              <div class="pad-help">Tap: jump / set, Shift+Tap: overwrite cue</div>
             </div>
           </div>
 
