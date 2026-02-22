@@ -1,0 +1,10 @@
+{
+  "inputName": "input",
+  "outputNames": {
+    "drums": "drums",
+    "instruments": "instruments",
+    "vocals": "vocals"
+  },
+  "frameSize": 262144,
+  "overlapRatio": 0.25
+}
