@@ -152,6 +152,22 @@ const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 const guidePanel = document.getElementById('guide-panel') as HTMLElement;
 midiLearnCancelBtn.disabled = true;
 
+const protectSingleDeckOutput = (activeDeckId: DeckId): void => {
+  const activeDeck = deckMap.get(activeDeckId);
+  if (!activeDeck || !activeDeck.playing) return;
+
+  const otherPlaying = decks.some((d) => d.id !== activeDeckId && d.playing);
+  if (otherPlaying) return;
+
+  if (activeDeckId === 'A' && crossfader.position > 0.97) {
+    crossfader.setPosition(0);
+    statusBadge.textContent = 'Crossfader auto-returned to A (B side silent)';
+  } else if (activeDeckId === 'B' && crossfader.position < 0.03) {
+    crossfader.setPosition(1);
+    statusBadge.textContent = 'Crossfader auto-returned to B (A side silent)';
+  }
+};
+
 const applyDeckMode = (): void => {
   root.classList.toggle('mode-2', deckMode === 2);
   root.classList.toggle('mode-4', deckMode === 4);
@@ -198,6 +214,12 @@ applyDeckMode();
 applyWaveformMode();
 applyMixerVisibility();
 applyLibraryVisibility();
+
+(['A', 'B'] as DeckId[]).forEach((id) => {
+  const deck = deckMap.get(id);
+  if (!deck) return;
+  deck.on('play', () => protectSingleDeckOutput(id));
+});
 
 if (isIPad) {
   statusBadge.textContent = 'iPad touch / low latency';
