@@ -9,6 +9,11 @@ const normalizeBase = (raw: string | undefined): string => {
 
 export default defineConfig({
   base: normalizeBase(process.env.VITE_BASE_PATH),
+  css: {
+    postcss: {
+      plugins: [],
+    },
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,
