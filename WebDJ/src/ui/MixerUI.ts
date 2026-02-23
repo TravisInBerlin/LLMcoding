@@ -1,0 +1,1120 @@
+import { Deck, type DeckId, type StemName } from '../audio/Deck';
+import { Crossfader } from '../audio/Crossfader';
+
+interface DeckMacroState {
+  bassCutLowEq: number | null;
+  brightEq: { hi: number; mid: number } | null;
+  vocalFocusStems: Record<StemName, number> | null;
+  drumFocusStems: Record<StemName, number> | null;
+}
+
+export class MixerUI {
+  private decks: Deck[];
+  private crossfader: Crossfader;
+  private el: HTMLElement;
+  private vuMap: Map<string, { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }> = new Map();
+  private centerTrackEls = new Map<DeckId, HTMLElement>();
+  private centerMetaEls = new Map<DeckId, HTMLElement>();
+  private centerTimeEls = new Map<DeckId, HTMLElement>();
+  private channelBpmEls = new Map<DeckId, HTMLElement>();
+  private volumeValueEls = new Map<DeckId, HTMLElement>();
+  private volumeSliderEls = new Map<DeckId, HTMLElement>();
+  private muteButtons = new Map<DeckId, HTMLButtonElement>();
+  private soloButtons = new Map<DeckId, HTMLButtonElement>();
+  private macroButtons = new Map<
+    DeckId,
+    { bassCut: HTMLButtonElement; bright: HTMLButtonElement; vocalFocus: HTMLButtonElement; drumFocus: HTMLButtonElement }
+  >();
+  private xyPadEls = new Map<DeckId, HTMLElement>();
+  private xyPadValueEls = new Map<DeckId, HTMLElement>();
+  private macroState = new Map<DeckId, DeckMacroState>();
+  private mutedDecks = new Set<DeckId>();
+  private mutedSavedVolume = new Map<DeckId, number>();
+  private soloDeck: DeckId | null = null;
+  private soloSavedVolumes = new Map<DeckId, number>();
+
+  constructor(container: HTMLElement, decks: Deck[], crossfader: Crossfader) {
+    this.decks = decks;
+    this.crossfader = crossfader;
+    this.el = container;
+    this.render();
+    this.bind();
+    this.bindCenterMeta();
+    this.startVU();
+  }
+
+  private render(): void {
+    this.el.innerHTML = `
+      <div class="center-panel">
+        <div class="center-trackline">
+          <div class="center-track center-track-a">
+            <div class="center-track-top">
+              <span class="center-deck-tag">A</span>
+              <span class="center-track-name" id="center-track-A">No Track Loaded</span>
+              <span class="center-track-time" id="center-time-A">0:00</span>
+            </div>
+            <span class="center-track-meta" id="center-meta-A">-- BPM / Key --</span>
+          </div>
+          <div class="center-divider-text">MIX STATUS</div>
+          <div class="center-track center-track-b">
+            <div class="center-track-top">
+              <span class="center-deck-tag">B</span>
+              <span class="center-track-name" id="center-track-B">No Track Loaded</span>
+              <span class="center-track-time" id="center-time-B">0:00</span>
+            </div>
+            <span class="center-track-meta" id="center-meta-B">-- BPM / Key --</span>
+          </div>
+        </div>
+
+        <div class="mixer-legend" aria-label="Mixer label guide">
+          <span class="mixer-legend-item"><strong>HI</strong> High EQ</span>
+          <span class="mixer-legend-item"><strong>MID</strong> Mid EQ</span>
+          <span class="mixer-legend-item"><strong>LOW</strong> Low EQ</span>
+          <span class="mixer-legend-item"><strong>FLT</strong> Tone Filter</span>
+          <span class="mixer-legend-item"><strong>DRM</strong> Drums</span>
+          <span class="mixer-legend-item"><strong>INS</strong> Instruments</span>
+          <span class="mixer-legend-item"><strong>VOC</strong> Vocals</span>
+          <span class="mixer-legend-item"><strong>ECHO</strong> Echo</span>
+          <span class="mixer-legend-item"><strong>RVB</strong> Reverb</span>
+          <span class="mixer-legend-item"><strong>FX FLT</strong> FX Filter</span>
+        </div>
+
+        <div class="mixer-channels">
+          ${this.decks
+        .map(
+          (deck) => `
+              <div class="mixer-channel" data-deck="${deck.id}">
+                <div class="channel-head">
+                  <span class="channel-label">${deck.id}</span>
+                  <span class="channel-bpm" id="chan-bpm-${deck.id}">-- BPM</span>
+                </div>
+
+                <div class="compact-row compact-row-4">
+                  <div class="compact-item" title="HI: High EQ">
+                    <span class="compact-item-label"><strong>HI</strong><small>HIGH EQ</small></span>
+                    <button class="mixer-knob" id="eq-hi-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="MID: Mid EQ">
+                    <span class="compact-item-label"><strong>MID</strong><small>MID EQ</small></span>
+                    <button class="mixer-knob" id="eq-mid-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="LOW: Low EQ">
+                    <span class="compact-item-label"><strong>LOW</strong><small>LOW EQ</small></span>
+                    <button class="mixer-knob" id="eq-lo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="FLT: Tone Filter">
+                    <span class="compact-item-label"><strong>FLT</strong><small>TONE FILTER</small></span>
+                    <button class="mixer-knob" id="filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                </div>
+
+                <div class="compact-row compact-row-3">
+                  <div class="compact-item" title="DRM: Drums stem level">
+                    <span class="compact-item-label"><strong>DRM</strong><small>DRUMS</small></span>
+                    <button class="mixer-knob" id="stem-drums-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="INS: Instruments stem level">
+                    <span class="compact-item-label"><strong>INS</strong><small>INSTRUMENTS</small></span>
+                    <button class="mixer-knob" id="stem-instruments-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="VOC: Vocals stem level">
+                    <span class="compact-item-label"><strong>VOC</strong><small>VOCALS</small></span>
+                    <button class="mixer-knob" id="stem-vocals-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                </div>
+
+                <div class="compact-row compact-row-3">
+                  <div class="compact-item" title="ECHO: Echo amount">
+                    <span class="compact-item-label"><strong>ECHO</strong><small>ECHO</small></span>
+                    <button class="mixer-knob" id="fx-echo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="RVB: Reverb amount">
+                    <span class="compact-item-label"><strong>RVB</strong><small>REVERB</small></span>
+                    <button class="mixer-knob" id="fx-reverb-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                  <div class="compact-item" title="FX FLT: Effect filter amount">
+                    <span class="compact-item-label"><strong>FX FLT</strong><small>FX FILTER</small></span>
+                    <button class="mixer-knob" id="fx-filter-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
+                  </div>
+                </div>
+
+                <div class="channel-foot">
+                  <div class="neural-fx-row">
+                    <button class="btn btn-neural-fx" id="nfx-vocal-echo-${deck.id}">VOCAL ECHO</button>
+                    <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
+                  </div>
+                  <div class="channel-tools">
+                    <button class="btn btn-mini btn-muted" id="mute-${deck.id}" title="Mute channel output">MUTE</button>
+                    <button class="btn btn-mini btn-muted" id="solo-${deck.id}" title="Solo this channel">SOLO</button>
+                    <button class="btn btn-mini btn-muted" id="reset-${deck.id}" title="Reset EQ/FX/Stem/Volume">RESET</button>
+                  </div>
+
+                  <div class="channel-lower-grid">
+                    <div class="macro-bank">
+                      <span class="macro-title">MIX MACRO</span>
+                      <div class="macro-grid">
+                        <button class="btn btn-mini btn-macro" id="macro-bass-cut-${deck.id}" title="LOW EQを下げてベース帯域を整理">BASS CUT</button>
+                        <button class="btn btn-mini btn-macro" id="macro-bright-${deck.id}" title="HIGH/MID EQを少し持ち上げる">BRIGHT+</button>
+                        <button class="btn btn-mini btn-macro" id="macro-vocal-${deck.id}" title="ボーカルを前に出す">VOCAL FOCUS</button>
+                        <button class="btn btn-mini btn-macro" id="macro-drum-${deck.id}" title="ドラムを前に出す">DRUM FOCUS</button>
+                      </div>
+                      <span class="macro-help">クリックでON/OFF</span>
+                    </div>
+
+                    <div class="meter-fader-stack">
+                      <div class="meter-stack">
+                        <span class="meter-label" title="Output level meter">VU</span>
+                        <canvas class="vu-meter" id="vu-${deck.id}" width="24" height="84" title="Output meter"></canvas>
+                      </div>
+                      <div class="fader-stack">
+                        <span class="meter-label" title="Channel volume fader">VOL</span>
+                        <div
+                          class="linear-fader linear-fader-vertical channel-volume-fader"
+                          id="vol-${deck.id}"
+                          role="slider"
+                          tabindex="0"
+                          aria-label="Deck ${deck.id} volume"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                          aria-valuenow="80"
+                        >
+                          <div class="linear-fader-track"></div>
+                          <div class="linear-fader-progress"></div>
+                          <div class="linear-fader-thumb"></div>
+                        </div>
+                        <span class="meter-value" id="vol-value-${deck.id}">80%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `,
+        )
+        .join('')}
+        </div>
+
+        <div class="xy-pad-section">
+          ${(['A', 'B'] as DeckId[])
+            .map(
+              (id) => `
+              <div class="xy-pad-card">
+                <div class="xy-pad-head">
+                  <span class="xy-pad-title">DECK ${id} XY FX</span>
+                  <span class="xy-pad-value" id="xy-value-${id}">FLT 0 / RVB 0%</span>
+                </div>
+                <div
+                  class="xy-pad"
+                  id="xy-pad-${id}"
+                  role="slider"
+                  tabindex="0"
+                  aria-label="Deck ${id} XY effects pad"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="50"
+                >
+                  <div class="xy-pad-grid"></div>
+                  <div class="xy-pad-crosshair"></div>
+                  <div class="xy-pad-dot"></div>
+                  <span class="xy-axis-label xy-axis-x">Filter</span>
+                  <span class="xy-axis-label xy-axis-y">Reverb</span>
+                </div>
+              </div>
+            `,
+            )
+            .join('')}
+        </div>
+
+        <div class="crossfader-section">
+          <span class="cf-label">A</span>
+          <div
+            class="linear-fader linear-fader-horizontal crossfader-control"
+            id="crossfader"
+            role="slider"
+            tabindex="0"
+            aria-label="Crossfader"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="50"
+          >
+            <div class="linear-fader-track"></div>
+            <div class="linear-fader-progress"></div>
+            <div class="linear-fader-center-mark"></div>
+            <div class="linear-fader-thumb"></div>
+          </div>
+          <span class="cf-label">B</span>
+        </div>
+      </div>
+    `;
+
+    this.decks.forEach((deck) => {
+      const canvas = this.el.querySelector(`#vu-${deck.id}`) as HTMLCanvasElement;
+      const ctx = canvas.getContext('2d')!;
+      this.vuMap.set(deck.id, { canvas, ctx });
+      this.channelBpmEls.set(deck.id, this.el.querySelector(`#chan-bpm-${deck.id}`) as HTMLElement);
+      this.volumeValueEls.set(deck.id, this.el.querySelector(`#vol-value-${deck.id}`) as HTMLElement);
+      this.volumeSliderEls.set(deck.id, this.el.querySelector(`#vol-${deck.id}`) as HTMLElement);
+      this.muteButtons.set(deck.id, this.el.querySelector(`#mute-${deck.id}`) as HTMLButtonElement);
+      this.soloButtons.set(deck.id, this.el.querySelector(`#solo-${deck.id}`) as HTMLButtonElement);
+      this.macroButtons.set(deck.id, {
+        bassCut: this.el.querySelector(`#macro-bass-cut-${deck.id}`) as HTMLButtonElement,
+        bright: this.el.querySelector(`#macro-bright-${deck.id}`) as HTMLButtonElement,
+        vocalFocus: this.el.querySelector(`#macro-vocal-${deck.id}`) as HTMLButtonElement,
+        drumFocus: this.el.querySelector(`#macro-drum-${deck.id}`) as HTMLButtonElement,
+      });
+      this.macroState.set(deck.id, {
+        bassCutLowEq: null,
+        brightEq: null,
+        vocalFocusStems: null,
+        drumFocusStems: null,
+      });
+    });
+
+    (['A', 'B'] as DeckId[]).forEach((id) => {
+      this.centerTrackEls.set(id, this.el.querySelector(`#center-track-${id}`) as HTMLElement);
+      this.centerMetaEls.set(id, this.el.querySelector(`#center-meta-${id}`) as HTMLElement);
+      this.centerTimeEls.set(id, this.el.querySelector(`#center-time-${id}`) as HTMLElement);
+      this.xyPadEls.set(id, this.el.querySelector(`#xy-pad-${id}`) as HTMLElement);
+      this.xyPadValueEls.set(id, this.el.querySelector(`#xy-value-${id}`) as HTMLElement);
+    });
+  }
+
+  private bind(): void {
+    const cf = this.el.querySelector('#crossfader') as HTMLElement;
+    this.bindLinearFader(cf, {
+      min: 0,
+      max: 100,
+      step: 1,
+      orientation: 'horizontal',
+      get: () => this.crossfader.position * 100,
+      set: (v) => {
+        this.crossfader.setPosition(v / 100);
+      },
+    });
+    this.setLinearFaderValue(cf, 50, 0, 100);
+    this.crossfader.onChange((pos) => {
+      this.setLinearFaderValue(cf, pos * 100, 0, 100);
+    });
+
+    this.decks.forEach((deck) => {
+      this.bindVolume(deck);
+      this.bindEQ(deck);
+      this.bindFX(deck);
+      this.bindStems(deck);
+      this.bindNeuralFX(deck);
+      this.bindChannelTools(deck);
+      this.bindMixMacros(deck);
+    });
+    this.bindXYPads();
+  }
+
+  private bindCenterMeta(): void {
+    (['A', 'B'] as DeckId[]).forEach((id) => {
+      const deck = this.decks.find((d) => d.id === id);
+      if (!deck) return;
+
+      const update = () => this.updateCenterDeckMeta(deck);
+      deck.on('loaded', update);
+      deck.on('play', update);
+      deck.on('pause', update);
+      deck.on('timeupdate', update);
+      deck.on('bpm', update);
+      deck.on('statechange', update);
+      update();
+    });
+
+    this.decks.forEach((deck) => {
+      const updateBpm = () => {
+        const bpmEl = this.channelBpmEls.get(deck.id);
+        if (!bpmEl) return;
+        bpmEl.textContent = deck.bpm > 0 ? `${deck.bpm.toFixed(1)} BPM` : '-- BPM';
+      };
+      deck.on('loaded', updateBpm);
+      deck.on('bpm', updateBpm);
+      updateBpm();
+    });
+  }
+
+  private updateCenterDeckMeta(deck: Deck): void {
+    const trackEl = this.centerTrackEls.get(deck.id);
+    const metaEl = this.centerMetaEls.get(deck.id);
+    const timeEl = this.centerTimeEls.get(deck.id);
+    if (!trackEl || !metaEl || !timeEl) return;
+
+    trackEl.textContent = deck.trackName || 'No Track Loaded';
+    const bpmText = deck.bpm > 0 ? `${deck.bpm.toFixed(1)} BPM` : '-- BPM';
+    metaEl.textContent = `${bpmText} / Key ${deck.musicalKey}`;
+    timeEl.textContent = this.formatTime(deck.currentTime);
+    trackEl.classList.toggle('playing', deck.playing);
+  }
+
+  private bindVolume(deck: Deck): void {
+    const slider = this.volumeSliderEls.get(deck.id)!;
+    const valueEl = this.volumeValueEls.get(deck.id);
+
+    this.bindLinearFader(slider, {
+      min: 0,
+      max: 100,
+      step: 1,
+      orientation: 'vertical',
+      get: () => this.getChannelVolume(deck.id),
+      set: (v) => {
+        if (this.soloDeck && this.soloDeck !== deck.id) {
+          this.setChannelVolume(deck.id, 0);
+          return;
+        }
+        if (this.mutedDecks.has(deck.id)) {
+          this.mutedDecks.delete(deck.id);
+          this.muteButtons.get(deck.id)?.classList.remove('active');
+        }
+        this.setChannelVolume(deck.id, v);
+      },
+    });
+
+    this.setChannelVolume(deck.id, 80);
+    if (valueEl) valueEl.textContent = '80%';
+  }
+
+  private bindLinearFader(
+    el: HTMLElement,
+    opts: {
+      min: number;
+      max: number;
+      step: number;
+      orientation: 'vertical' | 'horizontal';
+      get: () => number;
+      set: (next: number) => void;
+    },
+  ): void {
+    const { min, max, step, orientation, get, set } = opts;
+    let dragging = false;
+    let pointerId: number | null = null;
+
+    const apply = (raw: number): void => {
+      const snapped = Math.round(raw / step) * step;
+      const next = this.clamp(snapped, min, max);
+      set(next);
+      this.setLinearFaderValue(el, next, min, max);
+    };
+
+    const applyFromPointer = (event: PointerEvent): void => {
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const ratioRaw =
+        orientation === 'horizontal'
+          ? (event.clientX - rect.left) / rect.width
+          : 1 - (event.clientY - rect.top) / rect.height;
+      const ratio = this.clamp(ratioRaw, 0, 1);
+      const next = min + ratio * (max - min);
+      apply(next);
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      pointerId = e.pointerId;
+      el.setPointerCapture(e.pointerId);
+      applyFromPointer(e);
+      e.preventDefault();
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging || pointerId !== e.pointerId) return;
+      applyFromPointer(e);
+      e.preventDefault();
+    });
+
+    const stop = (e: PointerEvent): void => {
+      if (pointerId !== e.pointerId) return;
+      dragging = false;
+      if (el.hasPointerCapture(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
+      pointerId = null;
+    };
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+
+    el.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      apply(get() + dir * step);
+    });
+
+    el.addEventListener('keydown', (e) => {
+      const key = e.key;
+      const dirKeys =
+        orientation === 'horizontal'
+          ? key === 'ArrowRight' || key === 'ArrowUp' || key === 'PageUp'
+          : key === 'ArrowUp' || key === 'ArrowRight' || key === 'PageUp';
+      const negKeys =
+        orientation === 'horizontal'
+          ? key === 'ArrowLeft' || key === 'ArrowDown' || key === 'PageDown'
+          : key === 'ArrowDown' || key === 'ArrowLeft' || key === 'PageDown';
+
+      if (key === 'Home') {
+        apply(min);
+        e.preventDefault();
+        return;
+      }
+      if (key === 'End') {
+        apply(max);
+        e.preventDefault();
+        return;
+      }
+      if (dirKeys) {
+        apply(get() + step);
+        e.preventDefault();
+        return;
+      }
+      if (negKeys) {
+        apply(get() - step);
+        e.preventDefault();
+      }
+    });
+
+    apply(get());
+  }
+
+  private bindXYPads(): void {
+    (['A', 'B'] as DeckId[]).forEach((id) => {
+      const deck = this.decks.find((d) => d.id === id);
+      const pad = this.xyPadEls.get(id);
+      const valueEl = this.xyPadValueEls.get(id);
+      if (!deck || !pad || !valueEl) return;
+
+      let pointerId: number | null = null;
+
+      const apply = (x01: number, y01: number): void => {
+        const x = this.clamp(x01, 0, 1);
+        const y = this.clamp(y01, 0, 1);
+        const filter = x * 2 - 1;
+        const reverb = y;
+        deck.setFilterBlend(filter);
+        deck.effects[1].setWet(reverb * 0.95);
+        pad.style.setProperty('--xy-x', `${x}`);
+        pad.style.setProperty('--xy-y', `${y}`);
+        pad.setAttribute('aria-valuenow', `${Math.round(x * 100)}`);
+        valueEl.textContent = `FLT ${filter.toFixed(2)} / RVB ${Math.round(reverb * 100)}%`;
+      };
+
+      const applyFromPointer = (event: PointerEvent): void => {
+        const rect = pad.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const x = (event.clientX - rect.left) / rect.width;
+        const y = 1 - (event.clientY - rect.top) / rect.height;
+        apply(x, y);
+      };
+
+      pad.addEventListener('pointerdown', (e) => {
+        pointerId = e.pointerId;
+        pad.setPointerCapture(e.pointerId);
+        applyFromPointer(e);
+        e.preventDefault();
+      });
+      pad.addEventListener('pointermove', (e) => {
+        if (pointerId !== e.pointerId) return;
+        applyFromPointer(e);
+        e.preventDefault();
+      });
+      const stop = (e: PointerEvent) => {
+        if (pointerId !== e.pointerId) return;
+        if (pad.hasPointerCapture(e.pointerId)) {
+          pad.releasePointerCapture(e.pointerId);
+        }
+        pointerId = null;
+      };
+      pad.addEventListener('pointerup', stop);
+      pad.addEventListener('pointercancel', stop);
+
+      pad.addEventListener('dblclick', () => {
+        apply(0.5, 0);
+      });
+
+      apply(0.5, 0);
+    });
+  }
+
+  private setLinearFaderValue(el: HTMLElement, value: number, min: number, max: number): void {
+    const ratio = (this.clamp(value, min, max) - min) / (max - min);
+    el.style.setProperty('--fader-ratio', `${Math.max(0, Math.min(1, ratio))}`);
+    el.setAttribute('aria-valuenow', `${Math.round(value)}`);
+    el.dataset.value = `${value}`;
+  }
+
+  private bindEQ(deck: Deck): void {
+    const hiKnob = this.el.querySelector(`#eq-hi-${deck.id}`) as HTMLElement;
+    const midKnob = this.el.querySelector(`#eq-mid-${deck.id}`) as HTMLElement;
+    const loKnob = this.el.querySelector(`#eq-lo-${deck.id}`) as HTMLElement;
+    const filterKnob = this.el.querySelector(`#filter-${deck.id}`) as HTMLElement;
+
+    this.bindMixerKnob(hiKnob, {
+      get: () => deck.eqHigh.gain.value,
+      set: (v) => {
+        deck.eqHigh.gain.value = v;
+      },
+      min: -18,
+      max: 18,
+      step: 0.5,
+      reset: 0,
+    });
+
+    this.bindMixerKnob(midKnob, {
+      get: () => deck.eqMid.gain.value,
+      set: (v) => {
+        deck.eqMid.gain.value = v;
+      },
+      min: -18,
+      max: 18,
+      step: 0.5,
+      reset: 0,
+    });
+
+    this.bindMixerKnob(loKnob, {
+      get: () => deck.eqLow.gain.value,
+      set: (v) => {
+        deck.eqLow.gain.value = v;
+      },
+      min: -18,
+      max: 18,
+      step: 0.5,
+      reset: 0,
+    });
+
+    let filterValue = 0;
+    this.bindMixerKnob(filterKnob, {
+      get: () => filterValue,
+      set: (v) => {
+        filterValue = v;
+        deck.setFilterBlend(v / 100);
+      },
+      min: -100,
+      max: 100,
+      step: 1,
+      reset: 0,
+    });
+  }
+
+  private bindFX(deck: Deck): void {
+    const echoKnob = this.el.querySelector(`#fx-echo-${deck.id}`) as HTMLElement;
+    const reverbKnob = this.el.querySelector(`#fx-reverb-${deck.id}`) as HTMLElement;
+    const filterKnob = this.el.querySelector(`#fx-filter-${deck.id}`) as HTMLElement;
+
+    let echoValue = 0;
+    this.bindMixerKnob(echoKnob, {
+      get: () => echoValue,
+      set: (v) => {
+        echoValue = v;
+        deck.effects[0].setWet(v / 100);
+      },
+      min: 0,
+      max: 100,
+      step: 1,
+      reset: 0,
+    });
+
+    let reverbValue = 0;
+    this.bindMixerKnob(reverbKnob, {
+      get: () => reverbValue,
+      set: (v) => {
+        reverbValue = v;
+        deck.effects[1].setWet(v / 100);
+      },
+      min: 0,
+      max: 100,
+      step: 1,
+      reset: 0,
+    });
+
+    let fxFilterValue = 0;
+    this.bindMixerKnob(filterKnob, {
+      get: () => fxFilterValue,
+      set: (v) => {
+        fxFilterValue = v;
+        deck.effects[2].setWet(v / 100);
+      },
+      min: 0,
+      max: 100,
+      step: 1,
+      reset: 0,
+    });
+  }
+
+  private bindStems(deck: Deck): void {
+    const stemIds: StemName[] = ['drums', 'instruments', 'vocals'];
+    stemIds.forEach((stem) => {
+      const knob = this.el.querySelector(`#stem-${stem}-${deck.id}`) as HTMLElement;
+      this.bindMixerKnob(knob, {
+        get: () => deck.getStemLevel(stem) * 100,
+        set: (v) => {
+          deck.setStemLevel(stem, v / 100);
+        },
+        min: 0,
+        max: 100,
+        step: 1,
+        reset: 100,
+      });
+    });
+  }
+
+  private bindMixerKnob(
+    el: HTMLElement,
+    opts: {
+      get: () => number;
+      set: (next: number) => void;
+      min: number;
+      max: number;
+      step: number;
+      reset: number;
+    },
+  ): void {
+    const { get, set, min, max, step, reset } = opts;
+    let dragging = false;
+    let pointerId: number | null = null;
+    let startY = 0;
+    let startX = 0;
+    let startValue = 0;
+    const sensitivity = (max - min) / 340;
+
+    const apply = (raw: number): void => {
+      const snapped = Math.round(raw / step) * step;
+      const next = this.clamp(snapped, min, max);
+      set(next);
+      this.setMixerKnobAngle(el, next, min, max);
+    };
+
+    this.setMixerKnobAngle(el, get(), min, max);
+
+    el.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      pointerId = e.pointerId;
+      startY = e.clientY;
+      startX = e.clientX;
+      startValue = get();
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging || pointerId !== e.pointerId) return;
+      const deltaY = startY - e.clientY;
+      const deltaX = e.clientX - startX;
+      const combinedDelta = deltaY + deltaX;
+      const precise = e.shiftKey ? 0.35 : 1;
+      apply(startValue + combinedDelta * sensitivity * precise);
+      e.preventDefault();
+    });
+
+    const stop = (e: PointerEvent) => {
+      if (pointerId !== e.pointerId) return;
+      dragging = false;
+      if (el.hasPointerCapture(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
+      pointerId = null;
+    };
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+
+    el.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const direction = e.deltaY < 0 ? 1 : -1;
+      apply(get() + direction * step);
+    });
+
+    el.addEventListener('dblclick', () => {
+      apply(reset);
+    });
+  }
+
+  private setMixerKnobAngle(el: HTMLElement, value: number, min: number, max: number): void {
+    const normalized = (value - min) / (max - min);
+    const clamped = Math.max(0, Math.min(1, normalized));
+    const deg = -140 + clamped * 280;
+    el.style.setProperty('--knob-angle', `${deg}deg`);
+    el.style.setProperty('--knob-fill', `${Math.round(clamped * 100)}%`);
+  }
+
+  private clamp(v: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  private bindNeuralFX(deck: Deck): void {
+    const vocalBtn = this.el.querySelector(`#nfx-vocal-echo-${deck.id}`) as HTMLButtonElement;
+    const drumBtn = this.el.querySelector(`#nfx-drum-filter-${deck.id}`) as HTMLButtonElement;
+
+    let vocalEchoOn = false;
+    let drumFilterOn = false;
+
+    vocalBtn.addEventListener('click', () => {
+      vocalEchoOn = !vocalEchoOn;
+      vocalBtn.classList.toggle('active', vocalEchoOn);
+      if (vocalEchoOn) {
+        deck.setStemLevel('vocals', 1);
+        deck.setStemLevel('instruments', Math.min(deck.getStemLevel('instruments'), 0.45));
+        deck.effects[0].setWet(0.62);
+        deck.effects[1].setWet(0.3);
+      } else {
+        deck.effects[0].setWet(0);
+        deck.effects[1].setWet(0);
+      }
+    });
+
+    drumBtn.addEventListener('click', () => {
+      drumFilterOn = !drumFilterOn;
+      drumBtn.classList.toggle('active', drumFilterOn);
+      if (drumFilterOn) {
+        deck.setStemLevel('drums', 1);
+        deck.setStemLevel('vocals', Math.min(deck.getStemLevel('vocals'), 0.45));
+        deck.setFilterBlend(-0.72);
+      } else {
+        deck.setFilterBlend(0);
+      }
+    });
+  }
+
+  private bindChannelTools(deck: Deck): void {
+    const muteBtn = this.muteButtons.get(deck.id);
+    const soloBtn = this.soloButtons.get(deck.id);
+    const resetBtn = this.el.querySelector(`#reset-${deck.id}`) as HTMLButtonElement | null;
+    if (!muteBtn || !soloBtn || !resetBtn) return;
+
+    muteBtn.addEventListener('click', () => {
+      this.toggleMute(deck.id);
+    });
+
+    soloBtn.addEventListener('click', () => {
+      this.toggleSolo(deck.id);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      this.resetChannel(deck.id);
+    });
+  }
+
+  private bindMixMacros(deck: Deck): void {
+    const macro = this.macroButtons.get(deck.id);
+    if (!macro) return;
+
+    macro.bassCut.addEventListener('click', () => {
+      this.toggleBassCut(deck);
+    });
+    macro.bright.addEventListener('click', () => {
+      this.toggleBright(deck);
+    });
+    macro.vocalFocus.addEventListener('click', () => {
+      this.toggleVocalFocus(deck);
+    });
+    macro.drumFocus.addEventListener('click', () => {
+      this.toggleDrumFocus(deck);
+    });
+  }
+
+  private getMacroState(deckId: DeckId): DeckMacroState {
+    const existing = this.macroState.get(deckId);
+    if (existing) return existing;
+    const initial: DeckMacroState = {
+      bassCutLowEq: null,
+      brightEq: null,
+      vocalFocusStems: null,
+      drumFocusStems: null,
+    };
+    this.macroState.set(deckId, initial);
+    return initial;
+  }
+
+  private setMacroButton(deckId: DeckId, key: keyof DeckMacroState, active: boolean): void {
+    const macro = this.macroButtons.get(deckId);
+    if (!macro) return;
+
+    if (key === 'bassCutLowEq') macro.bassCut.classList.toggle('active', active);
+    if (key === 'brightEq') macro.bright.classList.toggle('active', active);
+    if (key === 'vocalFocusStems') macro.vocalFocus.classList.toggle('active', active);
+    if (key === 'drumFocusStems') macro.drumFocus.classList.toggle('active', active);
+  }
+
+  private toggleBassCut(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.bassCutLowEq !== null) {
+      deck.eqLow.gain.value = state.bassCutLowEq;
+      state.bassCutLowEq = null;
+      this.setMacroButton(deck.id, 'bassCutLowEq', false);
+      this.syncDeckControlAngles(deck.id);
+      return;
+    }
+    state.bassCutLowEq = deck.eqLow.gain.value;
+    deck.eqLow.gain.value = -14;
+    this.setMacroButton(deck.id, 'bassCutLowEq', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private toggleBright(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.brightEq) {
+      deck.eqHigh.gain.value = state.brightEq.hi;
+      deck.eqMid.gain.value = state.brightEq.mid;
+      state.brightEq = null;
+      this.setMacroButton(deck.id, 'brightEq', false);
+      this.syncDeckControlAngles(deck.id);
+      return;
+    }
+    state.brightEq = { hi: deck.eqHigh.gain.value, mid: deck.eqMid.gain.value };
+    deck.eqHigh.gain.value = 8;
+    deck.eqMid.gain.value = 2;
+    this.setMacroButton(deck.id, 'brightEq', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private snapshotStemLevels(deck: Deck): Record<StemName, number> {
+    return {
+      drums: deck.getStemLevel('drums'),
+      instruments: deck.getStemLevel('instruments'),
+      vocals: deck.getStemLevel('vocals'),
+    };
+  }
+
+  private applyStemSnapshot(deck: Deck, snapshot: Record<StemName, number>): void {
+    deck.setStemLevel('drums', snapshot.drums);
+    deck.setStemLevel('instruments', snapshot.instruments);
+    deck.setStemLevel('vocals', snapshot.vocals);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private toggleVocalFocus(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.vocalFocusStems) {
+      this.applyStemSnapshot(deck, state.vocalFocusStems);
+      state.vocalFocusStems = null;
+      this.setMacroButton(deck.id, 'vocalFocusStems', false);
+      return;
+    }
+
+    if (state.drumFocusStems) {
+      this.applyStemSnapshot(deck, state.drumFocusStems);
+      state.drumFocusStems = null;
+      this.setMacroButton(deck.id, 'drumFocusStems', false);
+    }
+
+    state.vocalFocusStems = this.snapshotStemLevels(deck);
+    deck.setStemLevel('vocals', 1);
+    deck.setStemLevel('instruments', 0.34);
+    deck.setStemLevel('drums', 0.22);
+    this.setMacroButton(deck.id, 'vocalFocusStems', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private toggleDrumFocus(deck: Deck): void {
+    const state = this.getMacroState(deck.id);
+    if (state.drumFocusStems) {
+      this.applyStemSnapshot(deck, state.drumFocusStems);
+      state.drumFocusStems = null;
+      this.setMacroButton(deck.id, 'drumFocusStems', false);
+      return;
+    }
+
+    if (state.vocalFocusStems) {
+      this.applyStemSnapshot(deck, state.vocalFocusStems);
+      state.vocalFocusStems = null;
+      this.setMacroButton(deck.id, 'vocalFocusStems', false);
+    }
+
+    state.drumFocusStems = this.snapshotStemLevels(deck);
+    deck.setStemLevel('drums', 1);
+    deck.setStemLevel('instruments', 0.48);
+    deck.setStemLevel('vocals', 0.24);
+    this.setMacroButton(deck.id, 'drumFocusStems', true);
+    this.syncDeckControlAngles(deck.id);
+  }
+
+  private clearMixMacros(deckId: DeckId): void {
+    const state = this.getMacroState(deckId);
+    state.bassCutLowEq = null;
+    state.brightEq = null;
+    state.vocalFocusStems = null;
+    state.drumFocusStems = null;
+    this.setMacroButton(deckId, 'bassCutLowEq', false);
+    this.setMacroButton(deckId, 'brightEq', false);
+    this.setMacroButton(deckId, 'vocalFocusStems', false);
+    this.setMacroButton(deckId, 'drumFocusStems', false);
+  }
+
+  private syncDeckControlAngles(deckId: DeckId): void {
+    const deck = this.decks.find((d) => d.id === deckId);
+    if (!deck) return;
+
+    const set = (id: string, value: number, min: number, max: number): void => {
+      const el = this.el.querySelector(`#${id}-${deckId}`) as HTMLElement | null;
+      if (!el) return;
+      this.setMixerKnobAngle(el, value, min, max);
+    };
+
+    set('eq-hi', deck.eqHigh.gain.value, -18, 18);
+    set('eq-mid', deck.eqMid.gain.value, -18, 18);
+    set('eq-lo', deck.eqLow.gain.value, -18, 18);
+    set('stem-drums', deck.getStemLevel('drums') * 100, 0, 100);
+    set('stem-instruments', deck.getStemLevel('instruments') * 100, 0, 100);
+    set('stem-vocals', deck.getStemLevel('vocals') * 100, 0, 100);
+  }
+
+  private resetChannel(deckId: DeckId): void {
+    this.clearMixMacros(deckId);
+
+    const ids = [
+      `eq-hi-${deckId}`,
+      `eq-mid-${deckId}`,
+      `eq-lo-${deckId}`,
+      `filter-${deckId}`,
+      `stem-drums-${deckId}`,
+      `stem-instruments-${deckId}`,
+      `stem-vocals-${deckId}`,
+      `fx-echo-${deckId}`,
+      `fx-reverb-${deckId}`,
+      `fx-filter-${deckId}`,
+    ];
+    ids.forEach((id) => {
+      const el = this.el.querySelector(`#${id}`) as HTMLElement | null;
+      el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    });
+
+    const vocalBtn = this.el.querySelector(`#nfx-vocal-echo-${deckId}`) as HTMLButtonElement | null;
+    const drumBtn = this.el.querySelector(`#nfx-drum-filter-${deckId}`) as HTMLButtonElement | null;
+    if (vocalBtn?.classList.contains('active')) vocalBtn.click();
+    if (drumBtn?.classList.contains('active')) drumBtn.click();
+
+    if (this.mutedDecks.has(deckId)) {
+      this.toggleMute(deckId);
+    }
+    if (this.soloDeck === deckId) {
+      this.toggleSolo(deckId);
+    }
+
+    this.setChannelVolume(deckId, 80);
+    this.syncDeckControlAngles(deckId);
+  }
+
+  private toggleMute(deckId: DeckId): void {
+    if (this.soloDeck === deckId) {
+      this.toggleSolo(deckId);
+    }
+
+    if (this.mutedDecks.has(deckId)) {
+      this.mutedDecks.delete(deckId);
+      const restore = this.mutedSavedVolume.get(deckId) ?? 80;
+      this.setChannelVolume(deckId, restore);
+      this.muteButtons.get(deckId)?.classList.remove('active');
+      return;
+    }
+
+    this.mutedDecks.add(deckId);
+    this.mutedSavedVolume.set(deckId, this.getChannelVolume(deckId));
+    this.setChannelVolume(deckId, 0);
+    this.muteButtons.get(deckId)?.classList.add('active');
+  }
+
+  private toggleSolo(deckId: DeckId): void {
+    if (this.soloDeck === deckId) {
+      this.soloDeck = null;
+      this.decks.forEach((d) => {
+        const restore = this.soloSavedVolumes.get(d.id) ?? 80;
+        this.setChannelVolume(d.id, this.mutedDecks.has(d.id) ? 0 : restore);
+        this.soloButtons.get(d.id)?.classList.remove('active');
+      });
+      this.soloSavedVolumes.clear();
+      return;
+    }
+
+    this.soloSavedVolumes.clear();
+    this.decks.forEach((d) => {
+      this.soloSavedVolumes.set(d.id, this.getChannelVolume(d.id));
+      const isTarget = d.id === deckId;
+      this.setChannelVolume(d.id, isTarget ? this.getChannelVolume(d.id) : 0);
+      this.soloButtons.get(d.id)?.classList.toggle('active', isTarget);
+    });
+    this.soloDeck = deckId;
+  }
+
+  private setChannelVolume(deckId: DeckId, value: number): void {
+    const deck = this.decks.find((d) => d.id === deckId);
+    const slider = this.volumeSliderEls.get(deckId);
+    const valueEl = this.volumeValueEls.get(deckId);
+    if (!deck || !slider) return;
+
+    const clamped = this.clamp(value, 0, 100);
+    deck.volume = clamped / 100;
+    this.setLinearFaderValue(slider, clamped, 0, 100);
+    if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
+  }
+
+  private getChannelVolume(deckId: DeckId): number {
+    const slider = this.volumeSliderEls.get(deckId);
+    if (slider) {
+      const raw = slider.dataset.value;
+      if (raw !== undefined) return parseFloat(raw) || 0;
+    }
+    const deck = this.decks.find((d) => d.id === deckId);
+    return deck ? deck.volume * 100 : 0;
+  }
+
+  private startVU(): void {
+    const buffers = new Map<string, Uint8Array<ArrayBuffer>>();
+    this.decks.forEach((deck) => {
+      buffers.set(deck.id, new Uint8Array(new ArrayBuffer(deck.analyser.frequencyBinCount)));
+    });
+
+    const draw = () => {
+      this.decks.forEach((deck) => {
+        const buf = buffers.get(deck.id);
+        const entry = this.vuMap.get(deck.id);
+        if (!buf || !entry) return;
+        deck.analyser.getByteFrequencyData(buf);
+        this.drawVU(entry.ctx, buf);
+      });
+      requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
+  }
+
+  private drawVU(ctx: CanvasRenderingContext2D, data: Uint8Array<ArrayBuffer>): void {
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) sum += data[i];
+    const avg = sum / data.length;
+    const level = avg / 255;
+
+    const segments = 28;
+    const gap = 1;
+    const segmentH = (h - (segments - 1) * gap) / segments;
+    const active = Math.round(level * segments);
+
+    for (let i = 0; i < segments; i++) {
+      const y = h - (i + 1) * segmentH - i * gap;
+      const ratio = i / (segments - 1);
+      const isOn = i < active;
+
+      let onColor = '#2dc2ff';
+      if (ratio > 0.78) onColor = '#ff5f7f';
+      else if (ratio > 0.62) onColor = '#ffbf66';
+
+      ctx.fillStyle = isOn ? onColor : 'rgba(161, 178, 204, 0.14)';
+      ctx.globalAlpha = isOn ? 0.95 : 0.75;
+      ctx.fillRect(2, y, w - 4, segmentH);
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(215, 227, 246, 0.25)';
+    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+    for (let y = 0; y < h; y += 4) {
+      ctx.fillStyle = 'rgba(6, 10, 24, 0.46)';
+      ctx.fillRect(0, y, w, 1);
+    }
+  }
+
+  private formatTime(seconds: number): string {
+    if (!isFinite(seconds) || seconds < 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+}
