@@ -2,6 +2,7 @@ import { detectBPM } from '../audio/BPMDetector';
 import type { Deck, DeckId } from '../audio/Deck';
 
 interface TrackItem {
+  id: string;
   file: File;
   name: string;
   size: string;
@@ -23,15 +24,38 @@ interface HistoryItem {
   trackIndex: number;
 }
 
+interface SmartPlaylist {
+  name: string;
+  description: string;
+  trackIndices: number[];
+}
+
+interface ManualPlaylist {
+  id: string;
+  name: string;
+  trackIds: string[];
+  createdAt: number;
+}
+
+interface StoredManualPlaylist {
+  id: string;
+  name: string;
+  trackIds: string[];
+  createdAt: number;
+}
+
 export class LibraryUI {
   private decks: Deck[];
   private el: HTMLElement;
   private tracks: TrackItem[] = [];
   private history: HistoryItem[] = [];
+  private manualPlaylists: ManualPlaylist[] = [];
+  private activeManualPlaylistId: string | null = null;
   private searchQuery = '';
   private trackDisplayMode: TrackDisplayMode = 'grid';
   private pageSize = 24;
   private currentPage = 1;
+  private readonly playlistsStorageKey = 'webdj.manual.playlists.v1';
 
   private trackListEl!: HTMLElement;
   private matchEl!: HTMLElement;
@@ -54,6 +78,7 @@ export class LibraryUI {
   constructor(container: HTMLElement, decks: Deck[]) {
     this.decks = decks;
     this.el = container;
+    this.loadManualPlaylists();
     this.render();
     this.bind();
     this.renderAllViews();
@@ -230,9 +255,16 @@ export class LibraryUI {
     });
 
     this.historyListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
+    this.playlistsListEl.addEventListener('click', (e) => {
+      this.handlePlaylistClick(e);
+      this.handleLoadButtonClick(e);
+    });
+    this.playlistsListEl.addEventListener('change', (e) => this.handlePlaylistChange(e));
     this.myFilesListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
     this.downloadedListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
     this.trackListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
+    this.neuralMixListEl.addEventListener('input', (e) => this.handleNeuralLevelInput(e));
+    this.neuralMixListEl.addEventListener('click', (e) => this.handleNeuralActionClick(e));
 
     const updateMatch = () => this.renderMatchSuggestions();
     this.decks.forEach((deck) => {
@@ -285,14 +317,16 @@ export class LibraryUI {
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       if (!file.type.startsWith('audio/')) continue;
+      const trackId = this.makeTrackId(file);
       const exists = this.tracks.some(
-        (t) => t.file.name === file.name && t.file.size === file.size && t.file.lastModified === file.lastModified,
+        (t) => t.id === trackId,
       );
       if (exists) continue;
 
       const analysis = await this.analyzeTrack(file);
       const hue = (this.tracks.length * 47 + file.name.length * 13) % 360;
       this.tracks.push({
+        id: trackId,
         file,
         name: file.name.replace(/\.[^/.]+$/, ''),
         size: this.formatSize(file.size),
@@ -303,6 +337,7 @@ export class LibraryUI {
       });
     }
 
+    this.cleanupManualPlaylists();
     this.renderAllViews();
     this.renderMatchSuggestions();
   }
@@ -360,36 +395,159 @@ export class LibraryUI {
   }
 
   private renderPlaylists(): void {
-    if (this.tracks.length === 0) {
-      this.playlistsListEl.innerHTML = this.emptyState('No playlists yet', 'Add tracks first and smart playlists appear here.');
-      return;
-    }
+    this.ensureActiveManualPlaylist();
+    const playlists = this.getSmartPlaylists();
+    const activePlaylist = this.manualPlaylists.find((pl) => pl.id === this.activeManualPlaylistId) || null;
 
-    const warmup = this.tracks.filter((t) => t.bpm < 110).slice(0, 6);
-    const groove = this.tracks.filter((t) => t.bpm >= 110 && t.bpm < 124).slice(0, 6);
-    const peak = this.tracks.filter((t) => t.bpm >= 124).slice(0, 6);
+    const playlistOptions = this.manualPlaylists
+      .map(
+        (pl) =>
+          `<option value="${this.escapeHtml(pl.id)}" ${pl.id === this.activeManualPlaylistId ? 'selected' : ''}>${this.escapeHtml(pl.name)} (${pl.trackIds.length})</option>`,
+      )
+      .join('');
 
-    const playlists = [
-      { name: 'Warmup Flow', tracks: warmup, description: 'Low BPM opening blend' },
-      { name: 'Main Groove', tracks: groove, description: 'Mid-tempo dance set' },
-      { name: 'Peak Time', tracks: peak, description: 'High energy prime-time tracks' },
-    ];
+    const trackEditorRows =
+      this.tracks.length === 0
+        ? this.emptyState('No tracks imported', 'Import files to assign tracks to playlists.')
+        : this.tracks
+            .map((track, idx) => {
+              const inActive = activePlaylist ? activePlaylist.trackIds.includes(track.id) : false;
+              return `
+                <div class="playlist-track-row">
+                  <div class="playlist-track-main">
+                    <div class="playlist-track-title">${this.escapeHtml(track.name)}</div>
+                    <div class="playlist-track-meta">${track.bpm.toFixed(1)} BPM • ${this.escapeHtml(track.key)} • ${track.size}</div>
+                  </div>
+                  <button class="btn btn-mini ${inActive ? 'btn-warning' : 'btn-muted'}" data-pl-action="toggle-track" data-pl-id="${this.escapeHtml(activePlaylist?.id || '')}" data-pl-track-id="${this.escapeHtml(track.id)}" ${activePlaylist ? '' : 'disabled'}>
+                    ${inActive ? 'REMOVE' : 'ADD'}
+                  </button>
+                  <div class="browser-actions">
+                    ${this.renderDeckLoadButtons(idx)}
+                  </div>
+                </div>
+              `;
+            })
+            .join('');
 
-    this.playlistsListEl.innerHTML = playlists
+    const manualCards =
+      this.manualPlaylists.length === 0
+        ? this.emptyState('No manual playlists', 'Create one with a name and then add tracks.')
+        : this.manualPlaylists
+            .map((pl) => {
+              const rows = pl.trackIds
+                .map((trackId) => {
+                  const idx = this.findTrackIndexById(trackId);
+                  if (idx < 0) return '';
+                  const track = this.tracks[idx];
+                  return `
+                    <div class="playlist-track-row">
+                      <div class="playlist-track-main">
+                        <div class="playlist-track-title">${this.escapeHtml(track.name)}</div>
+                        <div class="playlist-track-meta">${track.bpm.toFixed(1)} BPM • ${this.escapeHtml(track.key)} • ${track.size}</div>
+                      </div>
+                      <button class="btn btn-mini btn-warning" data-pl-action="toggle-track" data-pl-id="${this.escapeHtml(pl.id)}" data-pl-track-id="${this.escapeHtml(track.id)}">
+                        REMOVE
+                      </button>
+                      <div class="browser-actions">
+                        ${this.renderDeckLoadButtons(idx)}
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('');
+
+              return `
+                <article class="playlist-card ${pl.id === this.activeManualPlaylistId ? 'is-active' : ''}">
+                  <div class="playlist-head">
+                    <strong>${this.escapeHtml(pl.name)}</strong>
+                    <span>${pl.trackIds.length} tracks</span>
+                  </div>
+                  <div class="browser-meta">Manual playlist • saved locally</div>
+                  <div class="playlist-card-actions">
+                    <button class="btn btn-mini btn-muted" data-pl-action="select" data-pl-id="${this.escapeHtml(pl.id)}">EDIT</button>
+                    <button class="btn btn-mini btn-warning" data-pl-action="delete" data-pl-id="${this.escapeHtml(pl.id)}">DELETE</button>
+                  </div>
+                  <div class="playlist-track-list">
+                    ${rows || '<span class="browser-chip muted">No tracks in this playlist</span>'}
+                  </div>
+                </article>
+              `;
+            })
+            .join('');
+
+    const smartCards = playlists
       .map((pl) => {
-        const samples = pl.tracks.map((t) => `<span class="browser-chip">${this.escapeHtml(t.name)}</span>`).join('');
+        const rows = pl.trackIndices
+          .map((idx) => {
+            const track = this.tracks[idx];
+            if (!track) return '';
+            return `
+              <div class="playlist-track-row">
+                <div class="playlist-track-main">
+                  <div class="playlist-track-title">${this.escapeHtml(track.name)}</div>
+                  <div class="playlist-track-meta">${track.bpm.toFixed(1)} BPM • ${this.escapeHtml(track.key)} • ${track.size}</div>
+                </div>
+                <div class="browser-actions">
+                  ${this.renderDeckLoadButtons(idx)}
+                </div>
+              </div>
+            `;
+          })
+          .join('');
         return `
           <article class="playlist-card">
             <div class="playlist-head">
               <strong>${pl.name}</strong>
-              <span>${pl.tracks.length} tracks</span>
+              <span>${pl.trackIndices.length} tracks</span>
             </div>
             <div class="browser-meta">${pl.description}</div>
-            <div class="browser-chip-row">${samples || '<span class="browser-chip muted">No matching tracks</span>'}</div>
+            <div class="playlist-track-list">
+              ${rows || '<span class="browser-chip muted">No matching tracks</span>'}
+            </div>
           </article>
         `;
       })
       .join('');
+
+    this.playlistsListEl.innerHTML = `
+      <section class="playlist-section">
+        <div class="playlist-section-head">
+          <strong>Manual Playlists</strong>
+          <span>Create / save / edit</span>
+        </div>
+        <div class="playlist-editor-toolbar">
+          <input type="text" class="search-input playlist-name-input" id="playlist-name-input" placeholder="New playlist name">
+          <button class="btn btn-mini btn-add-files" data-pl-action="create">CREATE</button>
+          <select class="library-page-size playlist-select" id="playlist-select" ${this.manualPlaylists.length === 0 ? 'disabled' : ''}>
+            ${playlistOptions || '<option value="">No playlist</option>'}
+          </select>
+          <button class="btn btn-mini btn-warning" data-pl-action="delete-selected" ${activePlaylist ? '' : 'disabled'}>DELETE SELECTED</button>
+        </div>
+        <div class="playlist-editor-grid">
+          <div class="playlist-editor-column">
+            <div class="playlist-editor-title">Track Assignment</div>
+            <div class="playlist-track-list">
+              ${trackEditorRows}
+            </div>
+          </div>
+          <div class="playlist-editor-column">
+            <div class="playlist-editor-title">Saved Manual Playlists</div>
+            <div class="playlist-track-list">
+              ${manualCards}
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="playlist-section">
+        <div class="playlist-section-head">
+          <strong>Smart Playlists</strong>
+          <span>Auto generated from BPM / energy</span>
+        </div>
+        <div class="playlist-track-list">
+          ${smartCards}
+        </div>
+      </section>
+    `;
   }
 
   private renderMyFiles(): void {
@@ -445,6 +603,7 @@ export class LibraryUI {
   private renderNeuralMix(): void {
     this.neuralMixListEl.innerHTML = this.decks
       .map((deck) => {
+        const hasTrack = Boolean(deck.trackName);
         const mode =
           deck.stemMode === 'analyzing'
             ? `Analyzing ${Math.round(deck.separationProgress * 100)}%`
@@ -452,6 +611,10 @@ export class LibraryUI {
               ? 'Unavailable'
               : deck.stemMode.toUpperCase();
         const title = this.escapeHtml(deck.trackName || `Deck ${deck.id} empty`);
+        const drums = hasTrack ? deck.getStemLevel('drums') : 0;
+        const instruments = hasTrack ? deck.getStemLevel('instruments') : 0;
+        const vocals = hasTrack ? deck.getStemLevel('vocals') : 0;
+        const disabledAttr = hasTrack ? '' : 'disabled';
         return `
           <article class="neural-card">
             <div class="playlist-head">
@@ -460,9 +623,28 @@ export class LibraryUI {
             </div>
             <div class="browser-title">${title}</div>
             <div class="neural-bars">
-              ${this.renderStemBar('Drums', deck.getStemLevel('drums'))}
-              ${this.renderStemBar('Inst', deck.getStemLevel('instruments'))}
-              ${this.renderStemBar('Vocals', deck.getStemLevel('vocals'))}
+              ${this.renderStemBar('Drums', drums)}
+              ${this.renderStemBar('Inst', instruments)}
+              ${this.renderStemBar('Vocals', vocals)}
+            </div>
+            <div class="neural-controls">
+              <label class="neural-control-row">
+                <span>Drums</span>
+                <input type="range" min="0" max="100" value="${Math.round(drums * 100)}" data-neural-level-deck="${deck.id}" data-neural-level-stem="drums" ${disabledAttr}>
+              </label>
+              <label class="neural-control-row">
+                <span>Inst</span>
+                <input type="range" min="0" max="100" value="${Math.round(instruments * 100)}" data-neural-level-deck="${deck.id}" data-neural-level-stem="instruments" ${disabledAttr}>
+              </label>
+              <label class="neural-control-row">
+                <span>Vocals</span>
+                <input type="range" min="0" max="100" value="${Math.round(vocals * 100)}" data-neural-level-deck="${deck.id}" data-neural-level-stem="vocals" ${disabledAttr}>
+              </label>
+            </div>
+            <div class="neural-preset-row">
+              <button class="btn btn-mini btn-muted" data-neural-action="vocal-focus" data-neural-deck="${deck.id}" ${disabledAttr}>VOCAL FOCUS</button>
+              <button class="btn btn-mini btn-muted" data-neural-action="drum-focus" data-neural-deck="${deck.id}" ${disabledAttr}>DRUM FOCUS</button>
+              <button class="btn btn-mini btn-muted" data-neural-action="reset" data-neural-deck="${deck.id}" ${disabledAttr}>RESET</button>
             </div>
           </article>
         `;
@@ -479,6 +661,56 @@ export class LibraryUI {
         <span>${pct}%</span>
       </div>
     `;
+  }
+
+  private handlePlaylistClick(e: Event): void {
+    const target = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-pl-action]');
+    if (!target) return;
+    const action = target.dataset.plAction || '';
+    const playlistId = target.dataset.plId || '';
+    const trackId = target.dataset.plTrackId || '';
+
+    if (action === 'create') {
+      const input = this.playlistsListEl.querySelector<HTMLInputElement>('#playlist-name-input');
+      const name = input?.value.trim() || '';
+      if (!name) {
+        this.emitStatus('Playlist name is required.');
+        return;
+      }
+      this.createManualPlaylist(name);
+      if (input) input.value = '';
+      return;
+    }
+
+    if (action === 'delete-selected') {
+      if (!this.activeManualPlaylistId) return;
+      this.deleteManualPlaylist(this.activeManualPlaylistId);
+      return;
+    }
+
+    if (action === 'delete' && playlistId) {
+      this.deleteManualPlaylist(playlistId);
+      return;
+    }
+
+    if (action === 'select' && playlistId) {
+      this.activeManualPlaylistId = playlistId;
+      this.renderPlaylists();
+      return;
+    }
+
+    if (action === 'toggle-track' && playlistId && trackId) {
+      this.toggleTrackInManualPlaylist(playlistId, trackId);
+    }
+  }
+
+  private handlePlaylistChange(e: Event): void {
+    const target = e.target as HTMLElement;
+    if (!(target instanceof HTMLSelectElement)) return;
+    if (target.id !== 'playlist-select') return;
+    const nextId = target.value || null;
+    this.activeManualPlaylistId = nextId;
+    this.renderPlaylists();
   }
 
   private pushHistory(deck: Deck): void {
@@ -498,6 +730,171 @@ export class LibraryUI {
     });
 
     if (this.history.length > 60) this.history.length = 60;
+  }
+
+  private getSmartPlaylists(): SmartPlaylist[] {
+    const warmup = this.indexTracks((t) => t.bpm < 110, 8);
+    const groove = this.indexTracks((t) => t.bpm >= 110 && t.bpm < 124, 8);
+    const peak = this.indexTracks((t) => t.bpm >= 124, 8);
+    const recent = [...this.tracks.keys()].slice(Math.max(0, this.tracks.length - 8)).reverse();
+
+    return [
+      { name: 'Warmup Flow', description: 'Low BPM opening blend', trackIndices: warmup },
+      { name: 'Main Groove', description: 'Mid-tempo dance set', trackIndices: groove },
+      { name: 'Peak Time', description: 'High energy prime-time tracks', trackIndices: peak },
+      { name: 'Recent Imports', description: 'Latest added tracks', trackIndices: recent },
+    ];
+  }
+
+  private indexTracks(predicate: (track: TrackItem) => boolean, limit: number): number[] {
+    const out: number[] = [];
+    for (let i = 0; i < this.tracks.length; i++) {
+      if (!predicate(this.tracks[i])) continue;
+      out.push(i);
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
+  private createManualPlaylist(name: string): void {
+    const normalized = name.trim();
+    if (!normalized) return;
+    const id = `pl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    this.manualPlaylists.unshift({
+      id,
+      name: normalized,
+      trackIds: [],
+      createdAt: Date.now(),
+    });
+    this.activeManualPlaylistId = id;
+    this.persistManualPlaylists();
+    this.renderPlaylists();
+    this.emitStatus(`Playlist "${normalized}" created.`);
+  }
+
+  private deleteManualPlaylist(id: string): void {
+    const index = this.manualPlaylists.findIndex((pl) => pl.id === id);
+    if (index < 0) return;
+    const name = this.manualPlaylists[index].name;
+    this.manualPlaylists.splice(index, 1);
+    this.ensureActiveManualPlaylist();
+    this.persistManualPlaylists();
+    this.renderPlaylists();
+    this.emitStatus(`Playlist "${name}" deleted.`);
+  }
+
+  private toggleTrackInManualPlaylist(playlistId: string, trackId: string): void {
+    const playlist = this.manualPlaylists.find((pl) => pl.id === playlistId);
+    if (!playlist) return;
+    const index = playlist.trackIds.indexOf(trackId);
+    if (index >= 0) {
+      playlist.trackIds.splice(index, 1);
+      this.emitStatus(`Removed track from "${playlist.name}".`);
+    } else {
+      playlist.trackIds.push(trackId);
+      this.emitStatus(`Added track to "${playlist.name}".`);
+    }
+    this.persistManualPlaylists();
+    this.renderPlaylists();
+  }
+
+  private ensureActiveManualPlaylist(): void {
+    const activeExists =
+      this.activeManualPlaylistId !== null && this.manualPlaylists.some((pl) => pl.id === this.activeManualPlaylistId);
+    if (activeExists) return;
+    this.activeManualPlaylistId = this.manualPlaylists[0]?.id || null;
+  }
+
+  private loadManualPlaylists(): void {
+    try {
+      const raw = localStorage.getItem(this.playlistsStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as StoredManualPlaylist[];
+      if (!Array.isArray(parsed)) return;
+      this.manualPlaylists = parsed
+        .filter((item) => item && typeof item.id === 'string' && typeof item.name === 'string' && Array.isArray(item.trackIds))
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          trackIds: item.trackIds.filter((v) => typeof v === 'string'),
+          createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now(),
+        }));
+      this.ensureActiveManualPlaylist();
+    } catch {
+      this.manualPlaylists = [];
+      this.activeManualPlaylistId = null;
+    }
+  }
+
+  private persistManualPlaylists(): void {
+    const serializable: StoredManualPlaylist[] = this.manualPlaylists.map((pl) => ({
+      id: pl.id,
+      name: pl.name,
+      trackIds: [...pl.trackIds],
+      createdAt: pl.createdAt,
+    }));
+    localStorage.setItem(this.playlistsStorageKey, JSON.stringify(serializable));
+  }
+
+  private cleanupManualPlaylists(): void {
+    if (this.manualPlaylists.length === 0) return;
+    const validTrackIds = new Set(this.tracks.map((track) => track.id));
+    this.manualPlaylists.forEach((pl) => {
+      pl.trackIds = pl.trackIds.filter((id, idx, arr) => validTrackIds.has(id) && arr.indexOf(id) === idx);
+    });
+    this.persistManualPlaylists();
+  }
+
+  private makeTrackId(file: File): string {
+    return `${file.name}:${file.size}:${file.lastModified}`;
+  }
+
+  private findTrackIndexById(trackId: string): number {
+    return this.tracks.findIndex((track) => track.id === trackId);
+  }
+
+  private handleNeuralLevelInput(e: Event): void {
+    const target = (e.target as HTMLElement).closest<HTMLInputElement>('[data-neural-level-deck][data-neural-level-stem]');
+    if (!target) return;
+    const deckId = target.dataset.neuralLevelDeck as DeckId;
+    const stem = target.dataset.neuralLevelStem as 'drums' | 'instruments' | 'vocals';
+    const deck = this.decks.find((d) => d.id === deckId);
+    if (!deck || !deck.trackName) return;
+    const value = parseInt(target.value, 10);
+    if (Number.isNaN(value)) return;
+    deck.setStemLevel(stem, value / 100);
+  }
+
+  private handleNeuralActionClick(e: Event): void {
+    const target = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-neural-action][data-neural-deck]');
+    if (!target) return;
+    const deckId = target.dataset.neuralDeck as DeckId;
+    const action = target.dataset.neuralAction;
+    const deck = this.decks.find((d) => d.id === deckId);
+    if (!deck || !deck.trackName) return;
+
+    if (action === 'vocal-focus') {
+      deck.setStemLevel('vocals', 1);
+      deck.setStemLevel('instruments', 0.55);
+      deck.setStemLevel('drums', 0.45);
+      this.emitStatus(`Deck ${deck.id}: Vocal Focus preset`);
+      return;
+    }
+
+    if (action === 'drum-focus') {
+      deck.setStemLevel('drums', 1);
+      deck.setStemLevel('instruments', 0.55);
+      deck.setStemLevel('vocals', 0.35);
+      this.emitStatus(`Deck ${deck.id}: Drum Focus preset`);
+      return;
+    }
+
+    if (action === 'reset') {
+      deck.setStemLevel('drums', 1);
+      deck.setStemLevel('instruments', 1);
+      deck.setStemLevel('vocals', 1);
+      this.emitStatus(`Deck ${deck.id}: Neural levels reset`);
+    }
   }
 
   private handleLoadButtonClick(e: Event): void {
