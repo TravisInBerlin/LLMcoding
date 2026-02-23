@@ -12,6 +12,7 @@ interface TrackItem {
 }
 
 type LibraryView = 'library' | 'history' | 'playlists' | 'my-files' | 'downloaded' | 'neural-mix';
+type TrackDisplayMode = 'grid' | 'compact' | 'list';
 
 interface HistoryItem {
   deckId: DeckId;
@@ -28,17 +29,27 @@ export class LibraryUI {
   private tracks: TrackItem[] = [];
   private history: HistoryItem[] = [];
   private searchQuery = '';
+  private trackDisplayMode: TrackDisplayMode = 'grid';
+  private pageSize = 24;
+  private currentPage = 1;
 
   private trackListEl!: HTMLElement;
   private matchEl!: HTMLElement;
   private dropZoneEl!: HTMLElement;
   private searchInputEl!: HTMLInputElement;
+  private displayControlsEl!: HTMLElement;
+  private pageSizeSelectEl!: HTMLSelectElement;
+  private pagerInfoEl!: HTMLElement;
+  private pagerSummaryEl!: HTMLElement;
+  private pagerPrevEl!: HTMLButtonElement;
+  private pagerNextEl!: HTMLButtonElement;
   private historyListEl!: HTMLElement;
   private playlistsListEl!: HTMLElement;
   private myFilesListEl!: HTMLElement;
   private downloadedListEl!: HTMLElement;
   private neuralMixListEl!: HTMLElement;
   private sidebarButtons = new Map<LibraryView, HTMLButtonElement>();
+  private displayModeButtons = new Map<TrackDisplayMode, HTMLButtonElement>();
 
   constructor(container: HTMLElement, decks: Deck[]) {
     this.decks = decks;
@@ -61,6 +72,19 @@ export class LibraryUI {
             <span class="library-match" id="library-match">Match: load tracks to get suggestions.</span>
           </div>
           <div class="library-actions">
+            <div class="library-display-controls" id="library-display-controls">
+              <div class="display-mode-group">
+                <button class="display-mode-btn active" data-display-mode="grid" title="カード表示">GRID</button>
+                <button class="display-mode-btn" data-display-mode="compact" title="高密度カード表示">COMPACT</button>
+                <button class="display-mode-btn" data-display-mode="list" title="リスト表示">LIST</button>
+              </div>
+              <select class="library-page-size" id="library-page-size" title="1ページの表示件数">
+                <option value="12">12 / page</option>
+                <option value="24" selected>24 / page</option>
+                <option value="48">48 / page</option>
+                <option value="96">96 / page</option>
+              </select>
+            </div>
             <input type="text" class="search-input" id="search-input" placeholder="Search tracks...">
             <label class="btn btn-add-files" for="file-picker">+ Add Files</label>
             <input type="file" id="file-picker" class="file-picker-input" multiple accept="audio/*">
@@ -79,7 +103,13 @@ export class LibraryUI {
 
           <div class="library-content">
             <section class="library-view active" id="view-library">
-              <div class="track-grid" id="track-list"></div>
+              <div class="track-grid mode-grid" id="track-list"></div>
+              <div class="library-pager" id="library-pager">
+                <button class="btn btn-mini btn-muted" id="library-page-prev">PREV</button>
+                <span class="library-page-info" id="library-page-info">1/1</span>
+                <button class="btn btn-mini btn-muted" id="library-page-next">NEXT</button>
+                <span class="library-page-summary" id="library-page-summary">0 tracks</span>
+              </div>
               <div class="drop-zone" id="drop-zone">
                 <div class="drop-zone-inner">
                   <span class="drop-copy">Drop audio files here</span>
@@ -116,6 +146,12 @@ export class LibraryUI {
     this.matchEl = this.el.querySelector('#library-match')!;
     this.dropZoneEl = this.el.querySelector('#drop-zone')!;
     this.searchInputEl = this.el.querySelector('#search-input') as HTMLInputElement;
+    this.displayControlsEl = this.el.querySelector('#library-display-controls') as HTMLElement;
+    this.pageSizeSelectEl = this.el.querySelector('#library-page-size') as HTMLSelectElement;
+    this.pagerInfoEl = this.el.querySelector('#library-page-info') as HTMLElement;
+    this.pagerSummaryEl = this.el.querySelector('#library-page-summary') as HTMLElement;
+    this.pagerPrevEl = this.el.querySelector('#library-page-prev') as HTMLButtonElement;
+    this.pagerNextEl = this.el.querySelector('#library-page-next') as HTMLButtonElement;
     this.historyListEl = this.el.querySelector('#history-list')!;
     this.playlistsListEl = this.el.querySelector('#playlists-list')!;
     this.myFilesListEl = this.el.querySelector('#my-files-list')!;
@@ -125,6 +161,11 @@ export class LibraryUI {
     this.el.querySelectorAll<HTMLButtonElement>('.sidebar-item[data-view]').forEach((btn) => {
       const view = btn.dataset.view as LibraryView;
       this.sidebarButtons.set(view, btn);
+    });
+
+    this.el.querySelectorAll<HTMLButtonElement>('.display-mode-btn[data-display-mode]').forEach((btn) => {
+      const mode = btn.dataset.displayMode as TrackDisplayMode;
+      this.displayModeButtons.set(mode, btn);
     });
   }
 
@@ -157,11 +198,35 @@ export class LibraryUI {
 
     this.searchInputEl.addEventListener('input', () => {
       this.searchQuery = this.searchInputEl.value.trim().toLowerCase();
+      this.currentPage = 1;
       this.renderAllViews();
     });
 
     this.sidebarButtons.forEach((btn, view) => {
       btn.addEventListener('click', () => this.switchView(view));
+    });
+
+    this.displayModeButtons.forEach((btn, mode) => {
+      btn.addEventListener('click', () => this.setTrackDisplayMode(mode));
+    });
+
+    this.pageSizeSelectEl.addEventListener('change', () => {
+      const size = parseInt(this.pageSizeSelectEl.value, 10);
+      if (Number.isNaN(size)) return;
+      this.pageSize = Math.max(1, size);
+      this.currentPage = 1;
+      this.renderTracks(this.searchQuery);
+    });
+
+    this.pagerPrevEl.addEventListener('click', () => {
+      if (this.currentPage <= 1) return;
+      this.currentPage -= 1;
+      this.renderTracks(this.searchQuery);
+    });
+
+    this.pagerNextEl.addEventListener('click', () => {
+      this.currentPage += 1;
+      this.renderTracks(this.searchQuery);
     });
 
     this.historyListEl.addEventListener('click', (e) => this.handleLoadButtonClick(e));
@@ -192,8 +257,28 @@ export class LibraryUI {
     });
 
     const searchable = view === 'library' || view === 'my-files' || view === 'downloaded';
+    const customizable = view === 'library';
     this.searchInputEl.disabled = !searchable;
     this.searchInputEl.placeholder = searchable ? 'Search tracks...' : 'Search unavailable in this tab';
+    this.displayControlsEl.classList.toggle('disabled', !customizable);
+    this.pageSizeSelectEl.disabled = !customizable;
+  }
+
+  private setTrackDisplayMode(mode: TrackDisplayMode): void {
+    if (this.trackDisplayMode === mode) return;
+    this.trackDisplayMode = mode;
+    this.currentPage = 1;
+    this.updateDisplayModeButtons();
+    this.renderTracks(this.searchQuery);
+  }
+
+  private updateDisplayModeButtons(): void {
+    this.displayModeButtons.forEach((btn, mode) => {
+      btn.classList.toggle('active', this.trackDisplayMode === mode);
+    });
+    this.trackListEl.classList.toggle('mode-grid', this.trackDisplayMode === 'grid');
+    this.trackListEl.classList.toggle('mode-compact', this.trackDisplayMode === 'compact');
+    this.trackListEl.classList.toggle('mode-list', this.trackDisplayMode === 'list');
   }
 
   private async addFiles(fileList: FileList): Promise<void> {
@@ -234,7 +319,19 @@ export class LibraryUI {
 
   private renderTracks(filter = ''): void {
     const indices = this.filteredTrackIndices(filter);
-    this.trackListEl.innerHTML = this.renderTrackCards(indices);
+    const total = indices.length;
+    const maxPage = Math.max(1, Math.ceil(total / this.pageSize));
+    this.currentPage = Math.min(Math.max(1, this.currentPage), maxPage);
+    const start = total === 0 ? 0 : (this.currentPage - 1) * this.pageSize;
+    const end = total === 0 ? 0 : Math.min(start + this.pageSize, total);
+    const pageIndices = indices.slice(start, end);
+
+    this.trackListEl.innerHTML = this.renderTrackEntries(pageIndices, total);
+    this.pagerInfoEl.textContent = `${this.currentPage}/${maxPage}`;
+    this.pagerSummaryEl.textContent = total === 0 ? '0 tracks' : `${start + 1}-${end} / ${total}`;
+    const navDisabled = total === 0;
+    this.pagerPrevEl.disabled = navDisabled || this.currentPage <= 1;
+    this.pagerNextEl.disabled = navDisabled || this.currentPage >= maxPage;
   }
 
   private renderHistory(): void {
@@ -433,13 +530,22 @@ export class LibraryUI {
     return indices;
   }
 
-  private renderTrackCards(indices: number[]): string {
+  private renderTrackEntries(indices: number[], totalMatches: number): string {
+    if (indices.length === 0) {
+      if (this.tracks.length === 0) return '';
+      return this.emptyState('No tracks in this page', totalMatches === 0 ? 'Try a different search keyword.' : 'Move to another page.');
+    }
+    if (this.trackDisplayMode === 'list') return this.renderTrackRows(indices);
+    return this.renderTrackCards(indices, this.trackDisplayMode === 'compact');
+  }
+
+  private renderTrackCards(indices: number[], compact = false): string {
     return indices
       .map((idx) => {
         const track = this.tracks[idx];
         const title = this.escapeHtml(track.name);
         return `
-          <div class="track-card">
+          <div class="track-card${compact ? ' compact' : ''}">
             <div class="track-art" style="--track-hue:${track.hue}">
               <span class="track-art-letter">${title.charAt(0) || '♪'}</span>
             </div>
@@ -451,6 +557,26 @@ export class LibraryUI {
               ${this.renderDeckLoadButtons(idx)}
             </div>
           </div>
+        `;
+      })
+      .join('');
+  }
+
+  private renderTrackRows(indices: number[]): string {
+    return indices
+      .map((idx) => {
+        const track = this.tracks[idx];
+        const title = this.escapeHtml(track.name);
+        return `
+          <article class="track-row">
+            <div class="track-row-main">
+              <div class="track-row-title" title="${title}">${title}</div>
+              <div class="track-row-meta">${track.bpm.toFixed(1)} BPM • ${this.escapeHtml(track.key)} • EN ${Math.round(track.energy * 100)} • ${track.size}</div>
+            </div>
+            <div class="track-load-row track-load-row-inline">
+              ${this.renderDeckLoadButtons(idx)}
+            </div>
+          </article>
         `;
       })
       .join('');

@@ -28,6 +28,8 @@ export class DeckUI {
   private autoLoopButtons = new Map<number, HTMLButtonElement>();
   private cueButtons: HTMLButtonElement[] = [];
   private cueBankButtons: HTMLButtonElement[] = [];
+  private cueClearBtn!: HTMLButtonElement;
+  private cueClearArmed = false;
   private cueBank = 0;
   private accentColor: string;
 
@@ -115,11 +117,23 @@ export class DeckUI {
               <div class="control-label">HOT CUE</div>
               <div class="cue-bank-row">
                 ${Array.from({ length: 4 }, (_, i) => `<button class="btn cue-bank-btn ${i === 0 ? 'active' : ''}" id="cue-bank-${side}-${i}" title="Show cues ${i * 4 + 1}-${i * 4 + 4}">${i * 4 + 1}-${i * 4 + 4}</button>`).join('')}
+                <button class="btn cue-clear-btn" id="cue-clear-${side}" title="CLR ONで次のタップを削除にする">CLR</button>
               </div>
               <div class="cue-points cue-grid" id="cue-grid-${side}">
-                ${Array.from({ length: 4 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Tap: ON/OFF cue point">${i + 1}</button>`).join('')}
+                ${Array.from({ length: 4 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Tap: set/jump, long press: clear">${i + 1}</button>`).join('')}
               </div>
-              <div class="control-explain">Hot Cue: タップ1回でセット、もう1回で解除</div>
+              <div class="control-explain">Hot Cue: タップ=セット/ジャンプ、長押し=解除、CLR=次のタップで削除</div>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">DJ SHOTS</div>
+              <div class="sfx-shot-row">
+                <button class="btn btn-sfx-shot" data-sfx="airhorn" id="sfx-airhorn-${side}" title="Airhorn one-shot">HORN</button>
+                <button class="btn btn-sfx-shot" data-sfx="laser" id="sfx-laser-${side}" title="Laser one-shot">LASER</button>
+                <button class="btn btn-sfx-shot" data-sfx="clap" id="sfx-clap-${side}" title="Clap one-shot">CLAP</button>
+                <button class="btn btn-sfx-shot" data-sfx="impact" id="sfx-impact-${side}" title="Impact one-shot">IMPACT</button>
+              </div>
+              <div class="control-explain">DJ FX: ワンタップで効果音</div>
             </div>
           </div>
 
@@ -171,6 +185,7 @@ export class DeckUI {
 
     this.cueButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#hot-cue-${side}-${i}`) as HTMLButtonElement);
     this.cueBankButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#cue-bank-${side}-${i}`) as HTMLButtonElement);
+    this.cueClearBtn = this.el.querySelector(`#cue-clear-${side}`) as HTMLButtonElement;
   }
 
   private bind(): void {
@@ -233,15 +248,61 @@ export class DeckUI {
     }
 
     this.cueButtons.forEach((btn, i) => {
-      btn.addEventListener('click', () => {
-        const cueId = this.getCueId(i);
-        const exists = this.deck.cuePoints.find((c) => c.id === cueId);
+      let holdTimer: number | null = null;
+      let holdTriggered = false;
 
-        if (exists) {
-          this.deck.clearCuePoint(cueId);
-        } else {
-          this.deck.setCuePoint(cueId);
+      const cueId = (): number => this.getCueId(i);
+      const clearCue = (): void => {
+        const id = cueId();
+        const exists = this.deck.cuePoints.find((c) => c.id === id);
+        if (!exists) return;
+        this.deck.clearCuePoint(id);
+      };
+      const stopHold = (): void => {
+        if (holdTimer !== null) {
+          clearTimeout(holdTimer);
+          holdTimer = null;
         }
+      };
+
+      btn.addEventListener('pointerdown', () => {
+        holdTriggered = false;
+        stopHold();
+        holdTimer = window.setTimeout(() => {
+          holdTriggered = true;
+          clearCue();
+        }, 520);
+      });
+
+      btn.addEventListener('pointerup', stopHold);
+      btn.addEventListener('pointercancel', stopHold);
+      btn.addEventListener('pointerleave', stopHold);
+
+      btn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        stopHold();
+        clearCue();
+      });
+
+      btn.addEventListener('click', () => {
+        stopHold();
+        if (holdTriggered) {
+          holdTriggered = false;
+          return;
+        }
+
+        const id = cueId();
+        const exists = this.deck.cuePoints.find((c) => c.id === id);
+        if (this.cueClearArmed) {
+          if (exists) this.deck.clearCuePoint(id);
+          this.setCueClearArmed(false);
+          return;
+        }
+        if (!exists) {
+          this.deck.setCuePoint(id);
+          return;
+        }
+        this.deck.jumpToCue(id);
       });
     });
 
@@ -250,6 +311,20 @@ export class DeckUI {
         this.cueBank = bank;
         this.updateCueBankUI();
         this.syncCueState();
+      });
+    });
+
+    this.cueClearBtn.addEventListener('click', () => {
+      this.setCueClearArmed(!this.cueClearArmed);
+    });
+
+    this.el.querySelectorAll<HTMLButtonElement>('.btn-sfx-shot[data-sfx]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sfx = btn.dataset.sfx;
+        if (!sfx) return;
+        window.dispatchEvent(new CustomEvent('sfx-trigger', { detail: { deckId: side, sfx } }));
+        btn.classList.add('active');
+        window.setTimeout(() => btn.classList.remove('active'), 180);
       });
     });
 
@@ -343,6 +418,7 @@ export class DeckUI {
     });
 
     this.updateCueBankUI();
+    this.setCueClearArmed(false);
     this.syncCueState();
     this.syncLoopState();
     this.syncTempoKeyUI();
@@ -375,10 +451,12 @@ export class DeckUI {
         btn.classList.add('active');
         btn.style.setProperty('--cue-color', cue.color);
         btn.setAttribute('aria-pressed', 'true');
+        btn.title = 'Tap: jump, long press: clear';
       } else {
         btn.classList.remove('active');
         btn.style.removeProperty('--cue-color');
         btn.setAttribute('aria-pressed', 'false');
+        btn.title = 'Tap: set cue';
       }
     });
   }
@@ -499,6 +577,13 @@ export class DeckUI {
     this.cueBankButtons.forEach((btn, idx) => {
       btn.classList.toggle('active', idx === this.cueBank);
     });
+  }
+
+  private setCueClearArmed(armed: boolean): void {
+    this.cueClearArmed = armed;
+    this.cueClearBtn.classList.toggle('active', armed);
+    this.cueClearBtn.setAttribute('aria-pressed', String(armed));
+    this.cueClearBtn.textContent = armed ? 'CLR ON' : 'CLR';
   }
 
   private updateVinylStyle(): void {

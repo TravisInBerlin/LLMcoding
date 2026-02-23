@@ -24,18 +24,9 @@ export class Waveform {
 
     this.canvas.addEventListener('pointerdown', (e) => {
       if (!this.deck.duration) return;
-      const rect = this.canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      if (this.mode === 'horizontal') {
-        const ratio = x / rect.width;
-        this.deck.seek(ratio * this.deck.duration);
-      } else {
-        const ratio = 1 - y / rect.height;
-        this.deck.seek(ratio * this.deck.duration);
-      }
-    });
+      this.seekFromPointer(e);
+      e.preventDefault();
+    }, { passive: false });
 
     this.startRender();
   }
@@ -148,9 +139,9 @@ export class Waveform {
     this.drawBeatGridHorizontal(w, h);
 
     const mid = h / 2;
-    const baseColor = 'rgba(225, 235, 252, 0.3)';
+    const baseColor = 'rgba(68, 102, 152, 0.32)';
     const playedColor = this.accentColor;
-    const centerColor = 'rgba(244, 248, 255, 0.78)';
+    const centerColor = 'rgba(209, 229, 255, 0.66)';
     const drawWidth = Math.max(1, Math.ceil(barWidth * 0.78));
 
     for (let i = 0; i < numBars; i++) {
@@ -171,12 +162,15 @@ export class Waveform {
     ctx.globalAlpha = 1.0;
 
     const playheadX = Math.floor(progress * w) + 0.5;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#ff3ca2';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = 'rgba(255, 58, 166, 0.58)';
+    ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.moveTo(playheadX, 0);
     ctx.lineTo(playheadX, h);
     ctx.stroke();
+    ctx.shadowBlur = 0;
 
     for (const cue of deck.cuePoints) {
       const cueX = (cue.position / deck.duration) * w;
@@ -197,9 +191,9 @@ export class Waveform {
     this.drawBeatGridVertical(w, h);
 
     const mid = w / 2;
-    const baseColor = 'rgba(225, 235, 252, 0.3)';
+    const baseColor = 'rgba(68, 102, 152, 0.32)';
     const playedColor = this.accentColor;
-    const centerColor = 'rgba(244, 248, 255, 0.78)';
+    const centerColor = 'rgba(209, 229, 255, 0.66)';
     const drawHeight = Math.max(1, Math.ceil(barHeight * 0.74));
 
     for (let i = 0; i < numBars; i++) {
@@ -220,18 +214,37 @@ export class Waveform {
     ctx.globalAlpha = 1.0;
 
     const playheadY = Math.floor(h - progress * h) + 0.5;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#ff3ca2';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = 'rgba(255, 58, 166, 0.58)';
+    ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.moveTo(0, playheadY);
     ctx.lineTo(w, playheadY);
     ctx.stroke();
+    ctx.shadowBlur = 0;
 
     for (const cue of deck.cuePoints) {
       const cueY = h - (cue.position / deck.duration) * h;
       ctx.fillStyle = cue.color;
       ctx.fillRect(0, Math.floor(cueY), w, 2);
     }
+  }
+
+  private seekFromPointer(e: PointerEvent): void {
+    if (!this.deck.duration) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    let ratio: number;
+    if (this.mode === 'horizontal') {
+      ratio = x / rect.width;
+    } else {
+      ratio = 1 - y / rect.height;
+    }
+    ratio = Math.max(0, Math.min(1, ratio));
+    this.deck.seek(ratio * this.deck.duration);
   }
 
   private drawLoopAreaHorizontal(w: number, h: number): void {

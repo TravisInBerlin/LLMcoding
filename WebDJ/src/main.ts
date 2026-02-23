@@ -10,6 +10,12 @@ import './style.css';
 
 type TransitionStyle = 'smooth' | 'power' | 'neural';
 let transitionStyle: TransitionStyle = 'smooth';
+type CueDeckId = 'A' | 'B';
+type SfxName = 'airhorn' | 'laser' | 'clap' | 'impact';
+
+type SinkCapableMediaElement = HTMLMediaElement & {
+  setSinkId: (sinkId: string) => Promise<void>;
+};
 
 const engine = new AudioEngine();
 const deckIds: DeckId[] = ['A', 'B', 'C', 'D'];
@@ -31,62 +37,72 @@ if (isTouch) root.classList.add('touch-mode');
 if (isIPad) root.classList.add('ipad-mode');
 root.innerHTML = `
   <header class="app-header">
-    <div class="logo-block">
+    <div class="topbar-left">
       <span class="logo-text">WebDJ NEXUS</span>
-      <span class="header-badge" id="status-badge">djay-style / iPad Performance</span>
+      <span class="header-badge" id="status-badge">Ready to mix</span>
     </div>
-    <div class="header-actions">
-      <button class="btn btn-mini btn-muted" id="midi-btn" title="MIDIコントローラーを接続/切断します">MIDI CONNECT</button>
-      <button class="btn btn-mini btn-muted" id="audio-test-btn" title="短いテストトーンを再生して音声出力を確認します">AUDIO TEST</button>
-      <select id="midi-learn-target" class="midi-learn-select" title="MIDI LEARNで割り当てる操作を選択します">
-        <option value="playA">Learn: Play A</option>
-        <option value="playB">Learn: Play B</option>
-        <option value="cueA">Learn: Cue A</option>
-        <option value="cueB">Learn: Cue B</option>
-        <option value="syncA">Learn: Sync A</option>
-        <option value="syncB">Learn: Sync B</option>
-        <option value="keyA">Learn: Key A</option>
-        <option value="keyB">Learn: Key B</option>
-        <option value="crossfader">Learn: Crossfader</option>
-        <option value="volA">Learn: Volume A</option>
-        <option value="volB">Learn: Volume B</option>
-        <option value="tempoA">Learn: Tempo A</option>
-        <option value="tempoB">Learn: Tempo B</option>
-        <option value="filterA">Learn: Filter A</option>
-        <option value="filterB">Learn: Filter B</option>
-        <option value="stemVocalA">Learn: Vocal A</option>
-        <option value="stemVocalB">Learn: Vocal B</option>
-        <option value="stemDrumsA">Learn: Drums A</option>
-        <option value="stemDrumsB">Learn: Drums B</option>
-        <option value="stemInstA">Learn: Inst A</option>
-        <option value="stemInstB">Learn: Inst B</option>
-      </select>
-      <button class="btn btn-mini btn-muted" id="midi-learn-btn" title="選択した操作を次に受けたMIDI信号へ割り当てます">MIDI LEARN</button>
-      <button class="btn btn-mini btn-muted" id="midi-learn-cancel-btn" title="MIDI学習モードを中断します">LEARN CANCEL</button>
-      <button class="btn btn-mini btn-muted" id="mixer-toggle-btn" title="中央MIXERの表示/非表示を切り替えます">MIXER HIDE</button>
-      <button class="btn btn-mini btn-muted" id="library-toggle-btn" title="ライブラリパネルの表示/非表示を切り替えます">LIBRARY HIDE</button>
+    <div class="topbar-center">
+      <button class="btn btn-mini btn-muted topbar-toggle" id="deck-mode-btn" title="2デッキ/4デッキを切り替えます">4 DECK</button>
+      <button class="btn btn-mini btn-muted topbar-toggle" id="waveform-mode-btn" title="波形表示を横/縦で切り替えます">WAVE: H</button>
+      <button class="btn btn-mini btn-muted topbar-toggle" id="library-toggle-btn" title="ライブラリパネルの表示/非表示を切り替えます">LIB: ON</button>
       <button class="btn btn-mini btn-accent" id="header-import-btn" title="曲ファイルを取り込む">ADD FILES</button>
-      <button class="btn btn-mini btn-muted" id="deck-mode-btn" title="2デッキ/4デッキを切り替えます">4 DECK</button>
-      <button class="btn btn-mini btn-muted" id="waveform-mode-btn" title="波形表示を横/縦で切り替えます">WAVE: H</button>
-      <select id="transition-style" class="midi-learn-select transition-select" title="クロスフェード時のミックス特性を選びます">
-        <option value="smooth">XFADE: SMOOTH</option>
-        <option value="power">XFADE: POWER</option>
-        <option value="neural">XFADE: NEURAL</option>
-      </select>
-      <button class="btn btn-mini btn-accent" id="auto-drop-btn" title="A/Bの自動トランジションを一回実行します">AUTO DROP</button>
-      <button class="btn btn-mini btn-muted" id="guide-toggle-btn" title="操作ガイドの表示/非表示を切り替えます">GUIDE</button>
-      <button class="btn btn-mini btn-key" id="automix-btn" title="定期自動ミックスのON/OFFを切り替えます">AUTOMIX OFF</button>
-      <button class="btn btn-mini btn-cue" id="record-btn" title="マスター出力の録音開始/停止">REC START</button>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-mini btn-muted settings-btn" id="settings-btn" title="MIDI/CUE/詳細設定">⚙ SETTINGS</button>
+      <button class="btn btn-mini btn-cue rec-btn" id="record-btn" title="マスター出力の録音開始/停止">REC START</button>
+    </div>
+    <div class="settings-popover hidden-control" id="settings-popover">
+      <div class="settings-grid">
+        <button class="btn btn-mini btn-muted" id="midi-btn" title="MIDIコントローラーを接続/切断します">MIDI CONNECT</button>
+        <button class="btn btn-mini btn-muted" id="cue-init-btn" title="ヘッドホンCUE出力を有効化します">CUE OUT</button>
+        <select id="cue-output-select" class="midi-learn-select cue-output-select" title="CUEの出力先オーディオデバイスを選びます">
+          <option value="default">CUE: Default Device</option>
+        </select>
+        <button class="btn btn-mini btn-muted" id="cue-a-btn" title="Deck AをヘッドホンCUEへ送ります">CUE A OFF</button>
+        <button class="btn btn-mini btn-muted" id="cue-b-btn" title="Deck BをヘッドホンCUEへ送ります">CUE B OFF</button>
+        <select id="cue-level-select" class="midi-learn-select cue-level-select" title="ヘッドホンCUE音量">
+          <option value="0.55">CUE LV 55%</option>
+          <option value="0.7" selected>CUE LV 70%</option>
+          <option value="0.85">CUE LV 85%</option>
+          <option value="1">CUE LV 100%</option>
+        </select>
+        <select id="midi-learn-target" class="midi-learn-select" title="MIDI LEARNで割り当てる操作を選択します">
+          <option value="playA">Learn: Play A</option>
+          <option value="playB">Learn: Play B</option>
+          <option value="cueA">Learn: Cue A</option>
+          <option value="cueB">Learn: Cue B</option>
+          <option value="syncA">Learn: Sync A</option>
+          <option value="syncB">Learn: Sync B</option>
+          <option value="keyA">Learn: Key A</option>
+          <option value="keyB">Learn: Key B</option>
+          <option value="crossfader">Learn: Crossfader</option>
+          <option value="volA">Learn: Volume A</option>
+          <option value="volB">Learn: Volume B</option>
+          <option value="tempoA">Learn: Tempo A</option>
+          <option value="tempoB">Learn: Tempo B</option>
+          <option value="filterA">Learn: Filter A</option>
+          <option value="filterB">Learn: Filter B</option>
+          <option value="stemVocalA">Learn: Vocal A</option>
+          <option value="stemVocalB">Learn: Vocal B</option>
+          <option value="stemDrumsA">Learn: Drums A</option>
+          <option value="stemDrumsB">Learn: Drums B</option>
+          <option value="stemInstA">Learn: Inst A</option>
+          <option value="stemInstB">Learn: Inst B</option>
+        </select>
+        <button class="btn btn-mini btn-muted" id="midi-learn-btn" title="選択した操作を次に受けたMIDI信号へ割り当てます">MIDI LEARN</button>
+        <button class="btn btn-mini btn-muted" id="midi-learn-cancel-btn" title="MIDI学習モードを中断します">LEARN CANCEL</button>
+        <button class="btn btn-mini btn-muted" id="mixer-toggle-btn" title="中央MIXERの表示/非表示を切り替えます">MIXER HIDE</button>
+        <select id="transition-style" class="midi-learn-select transition-select" title="クロスフェード時のミックス特性を選びます">
+          <option value="smooth">XFADE: SMOOTH</option>
+          <option value="power">XFADE: POWER</option>
+          <option value="neural">XFADE: NEURAL</option>
+        </select>
+        <button class="btn btn-mini btn-accent" id="auto-drop-btn" title="A/Bの自動トランジションを一回実行します">AUTO DROP</button>
+        <button class="btn btn-mini btn-muted" id="guide-toggle-btn" title="操作ガイドの表示/非表示を切り替えます">GUIDE</button>
+        <button class="btn btn-mini btn-key" id="automix-btn" title="定期自動ミックスのON/OFFを切り替えます">AUTOMIX OFF</button>
+      </div>
     </div>
   </header>
-
-  <section class="toolbar-help" id="toolbar-help">
-    <span class="toolbar-help-item"><strong>MIDI CONNECT</strong>MIDI機器の接続</span>
-    <span class="toolbar-help-item"><strong>Learn: Play A</strong>学習対象の操作を選択</span>
-    <span class="toolbar-help-item"><strong>MIDI LEARN</strong>次のMIDI信号に割当</span>
-    <span class="toolbar-help-item"><strong>MIXER / LIBRARY / 4 DECK / WAVE</strong>画面表示の切替</span>
-    <span class="toolbar-help-item"><strong>AUTO DROP / AUTOMIX / REC</strong>自動遷移・自動MIX・録音</span>
-  </section>
 
   <section class="guide-panel" id="guide-panel">
     <span><strong>1.</strong> Add Files でライブラリに曲を追加</span>
@@ -142,8 +158,14 @@ const transitionStyleSelect = document.getElementById('transition-style') as HTM
 const autoDropBtn = document.getElementById('auto-drop-btn') as HTMLButtonElement;
 const automixBtn = document.getElementById('automix-btn') as HTMLButtonElement;
 const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
+const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
+const settingsPopover = document.getElementById('settings-popover') as HTMLDivElement;
 const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
-const audioTestBtn = document.getElementById('audio-test-btn') as HTMLButtonElement;
+const cueInitBtn = document.getElementById('cue-init-btn') as HTMLButtonElement;
+const cueOutputSelect = document.getElementById('cue-output-select') as HTMLSelectElement;
+const cueABtn = document.getElementById('cue-a-btn') as HTMLButtonElement;
+const cueBBtn = document.getElementById('cue-b-btn') as HTMLButtonElement;
+const cueLevelSelect = document.getElementById('cue-level-select') as HTMLSelectElement;
 const midiLearnBtn = document.getElementById('midi-learn-btn') as HTMLButtonElement;
 const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as HTMLButtonElement;
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
@@ -156,6 +178,280 @@ const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButton
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 const guidePanel = document.getElementById('guide-panel') as HTMLElement;
 midiLearnCancelBtn.disabled = true;
+midiLearnCancelBtn.classList.add('hidden-control');
+
+const cueMonitorEl = document.createElement('audio');
+cueMonitorEl.autoplay = true;
+cueMonitorEl.setAttribute('playsinline', '');
+cueMonitorEl.preload = 'auto';
+cueMonitorEl.srcObject = engine.cueStream;
+cueMonitorEl.className = 'cue-monitor-audio';
+cueMonitorEl.setAttribute('aria-hidden', 'true');
+root.appendChild(cueMonitorEl);
+
+const hasSetSinkId = (el: HTMLMediaElement): el is SinkCapableMediaElement =>
+  typeof (el as Partial<SinkCapableMediaElement>).setSinkId === 'function';
+const isSetSinkIdSupported = hasSetSinkId(cueMonitorEl);
+const cueEnabledDecks: Record<CueDeckId, boolean> = { A: false, B: false };
+let cueMonitorReady = false;
+
+const updateCueInitButton = (): void => {
+  cueInitBtn.classList.toggle('active', cueMonitorReady);
+  cueInitBtn.textContent = cueMonitorReady ? 'CUE ON' : 'CUE OUT';
+  cueInitBtn.setAttribute('aria-pressed', String(cueMonitorReady));
+};
+
+const updateCueDeckButton = (deckId: CueDeckId): void => {
+  const isOn = cueEnabledDecks[deckId];
+  const btn = deckId === 'A' ? cueABtn : cueBBtn;
+  btn.textContent = `CUE ${deckId} ${isOn ? 'ON' : 'OFF'}`;
+  btn.classList.toggle('active', isOn);
+  btn.setAttribute('aria-pressed', String(isOn));
+};
+
+const updateCueButtons = (): void => {
+  updateCueDeckButton('A');
+  updateCueDeckButton('B');
+};
+
+const populateCueOutputs = async (): Promise<void> => {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    cueOutputSelect.innerHTML = '<option value="default">CUE: Default Device</option>';
+    cueOutputSelect.disabled = true;
+    return;
+  }
+
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const outputs = devices.filter((device) => device.kind === 'audiooutput');
+    cueOutputSelect.innerHTML = '';
+    if (outputs.length === 0) {
+      const option = document.createElement('option');
+      option.value = 'default';
+      option.textContent = 'CUE: Default Device';
+      cueOutputSelect.appendChild(option);
+    }
+
+    outputs.forEach((device, idx) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId || 'default';
+      option.textContent = `CUE: ${device.label?.trim() || `Output ${idx + 1}`}`;
+      cueOutputSelect.appendChild(option);
+    });
+    cueOutputSelect.disabled = !isSetSinkIdSupported;
+  } catch {
+    cueOutputSelect.innerHTML = '<option value="default">CUE: Default Device</option>';
+    cueOutputSelect.disabled = !isSetSinkIdSupported;
+  }
+};
+
+const initCueMonitor = async (): Promise<boolean> => {
+  try {
+    await engine.resume();
+    cueMonitorEl.srcObject = engine.cueStream;
+    await cueMonitorEl.play();
+    cueMonitorReady = true;
+    updateCueInitButton();
+    return true;
+  } catch (error) {
+    cueMonitorReady = false;
+    updateCueInitButton();
+    const message = error instanceof Error ? error.message : 'failed';
+    statusBadge.textContent = `CUE init failed: ${message}`;
+    return false;
+  }
+};
+
+const disableCueMonitor = (): void => {
+  (Object.keys(cueEnabledDecks) as CueDeckId[]).forEach((deckId) => {
+    cueEnabledDecks[deckId] = false;
+    deckMap.get(deckId)?.setCueEnabled(false);
+  });
+  updateCueButtons();
+  cueMonitorEl.pause();
+  cueMonitorEl.srcObject = null;
+  cueMonitorReady = false;
+  updateCueInitButton();
+  statusBadge.textContent = 'Headphone CUE disabled';
+};
+
+const setCueSink = async (sinkId: string): Promise<void> => {
+  if (!isSetSinkIdSupported) {
+    statusBadge.textContent = 'setSinkId unsupported: browser only uses default output';
+    return;
+  }
+  if (!cueMonitorReady) {
+    const ok = await initCueMonitor();
+    if (!ok) return;
+  }
+
+  try {
+    if (!hasSetSinkId(cueMonitorEl)) {
+      statusBadge.textContent = 'setSinkId unsupported: browser only uses default output';
+      return;
+    }
+    await cueMonitorEl.setSinkId(sinkId);
+    const selectedLabel = cueOutputSelect.options[cueOutputSelect.selectedIndex]?.textContent ?? 'CUE output changed';
+    statusBadge.textContent = selectedLabel.replace(/^CUE:\s*/, 'CUE output: ');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'failed';
+    statusBadge.textContent = `CUE output switch failed: ${message}`;
+  }
+};
+
+const setDeckCue = async (deckId: CueDeckId, enabled: boolean): Promise<void> => {
+  const deck = deckMap.get(deckId);
+  if (!deck) return;
+  if (enabled && !cueMonitorReady) {
+    const ok = await initCueMonitor();
+    if (!ok) return;
+  }
+
+  cueEnabledDecks[deckId] = enabled;
+  deck.setCueEnabled(enabled);
+  updateCueDeckButton(deckId);
+  const activeDecks = (Object.entries(cueEnabledDecks) as [CueDeckId, boolean][])
+    .filter(([, on]) => on)
+    .map(([id]) => id)
+    .join(' / ');
+  statusBadge.textContent = activeDecks ? `Headphone CUE: ${activeDecks}` : 'Headphone CUE: OFF';
+};
+
+const sfxNames: SfxName[] = ['airhorn', 'laser', 'clap', 'impact'];
+const isSfxName = (value: unknown): value is SfxName => typeof value === 'string' && sfxNames.includes(value as SfxName);
+
+const createNoiseSource = (durationSec: number): AudioBufferSourceNode => {
+  const ctx = engine.ctx;
+  const length = Math.max(1, Math.floor(ctx.sampleRate * durationSec));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  return src;
+};
+
+const triggerSfx = async (name: SfxName): Promise<void> => {
+  await engine.resume();
+  const ctx = engine.ctx;
+  const now = ctx.currentTime + 0.003;
+
+  if (name === 'airhorn') {
+    const master = ctx.createGain();
+    const tone = ctx.createBiquadFilter();
+    const oscA = ctx.createOscillator();
+    const oscB = ctx.createOscillator();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.2, now + 0.012);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+    tone.type = 'bandpass';
+    tone.frequency.setValueAtTime(780, now);
+    tone.Q.value = 1.1;
+    oscA.type = 'sawtooth';
+    oscB.type = 'square';
+    oscA.frequency.setValueAtTime(560, now);
+    oscA.frequency.linearRampToValueAtTime(460, now + 0.44);
+    oscB.frequency.setValueAtTime(820, now);
+    oscB.frequency.linearRampToValueAtTime(700, now + 0.44);
+    oscA.connect(tone);
+    oscB.connect(tone);
+    tone.connect(master);
+    master.connect(engine.masterGain);
+    oscA.start(now);
+    oscB.start(now);
+    oscA.stop(now + 0.5);
+    oscB.stop(now + 0.5);
+    return;
+  }
+
+  if (name === 'laser') {
+    const gain = ctx.createGain();
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 220;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.24, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1800, now);
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.28);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(engine.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.32);
+    return;
+  }
+
+  if (name === 'clap') {
+    const delays = [0, 0.038, 0.076];
+    delays.forEach((offset, idx) => {
+      const src = createNoiseSource(0.13);
+      const hp = ctx.createBiquadFilter();
+      const bp = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+      hp.type = 'highpass';
+      hp.frequency.value = 850;
+      bp.type = 'bandpass';
+      bp.frequency.value = 1700;
+      bp.Q.value = 0.9;
+      const start = now + offset;
+      const level = idx === 0 ? 0.22 : idx === 1 ? 0.16 : 0.12;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(level, start + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.08);
+      src.connect(hp);
+      hp.connect(bp);
+      bp.connect(gain);
+      gain.connect(engine.masterGain);
+      src.start(start);
+      src.stop(start + 0.11);
+    });
+    return;
+  }
+
+  const src = createNoiseSource(0.95);
+  const lp = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(260, now);
+  lp.frequency.exponentialRampToValueAtTime(65, now + 0.8);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.26, now + 0.018);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.88);
+  src.connect(lp);
+  lp.connect(gain);
+  gain.connect(engine.masterGain);
+  src.start(now);
+  src.stop(now + 0.92);
+};
+
+engine.setCueLevel(Number(cueLevelSelect.value || '0.7'));
+deckMap.get('A')?.setCueLevel(1);
+deckMap.get('B')?.setCueLevel(1);
+cueInitBtn.disabled = false;
+cueOutputSelect.disabled = !isSetSinkIdSupported;
+updateCueInitButton();
+updateCueButtons();
+void populateCueOutputs();
+if (navigator.mediaDevices?.addEventListener) {
+  navigator.mediaDevices.addEventListener('devicechange', () => {
+    void populateCueOutputs();
+  });
+}
+
+window.addEventListener(
+  'sfx-trigger',
+  ((e: CustomEvent) => {
+    const raw = e.detail?.sfx;
+    if (!isSfxName(raw)) return;
+    void triggerSfx(raw);
+    statusBadge.textContent = `DJ FX: ${raw.toUpperCase()}`;
+  }) as EventListener,
+);
 
 const applyDeckMode = (): void => {
   root.classList.toggle('mode-2', deckMode === 2);
@@ -184,7 +480,13 @@ const applyMixerVisibility = (): void => {
 
 const applyLibraryVisibility = (): void => {
   root.classList.toggle('library-hidden', !libraryVisible);
-  libraryToggleBtn.textContent = libraryVisible ? 'LIBRARY HIDE' : 'LIBRARY SHOW';
+  libraryToggleBtn.textContent = libraryVisible ? 'LIB: ON' : 'LIB: OFF';
+};
+
+const setSettingsOpen = (open: boolean): void => {
+  settingsPopover.classList.toggle('hidden-control', !open);
+  settingsBtn.classList.toggle('active', open);
+  settingsBtn.setAttribute('aria-expanded', String(open));
 };
 
 const openFileImport = (): void => {
@@ -203,6 +505,7 @@ applyDeckMode();
 applyWaveformMode();
 applyMixerVisibility();
 applyLibraryVisibility();
+setSettingsOpen(false);
 
 (['A', 'B'] as DeckId[]).forEach((id) => {
   const deck = deckMap.get(id);
@@ -549,9 +852,11 @@ const midi = new MidiController(
   (learnMsg) => {
     statusBadge.textContent = learnMsg;
     const learning = learnMsg.startsWith('Learning');
+    if (learning) setSettingsOpen(true);
     midiLearnBtn.classList.toggle('active', learning);
     midiLearnCancelBtn.classList.toggle('active', learning);
     midiLearnCancelBtn.disabled = !learning;
+    midiLearnCancelBtn.classList.toggle('hidden-control', !learning);
     midiLearnBtn.textContent = learning ? 'LEARNING...' : 'MIDI LEARN';
   },
 );
@@ -561,30 +866,35 @@ midiBtn.addEventListener('click', async () => {
   await midi.connect();
 });
 
-audioTestBtn.addEventListener('click', async () => {
-  try {
-    await engine.resume();
-    const { ctx } = engine;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-
-    const now = ctx.currentTime;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.28);
-
-    statusBadge.textContent = `AUDIO TEST sent (ctx: ${ctx.state}, ${Math.round(ctx.sampleRate)}Hz)`;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown error';
-    statusBadge.textContent = `AUDIO TEST failed: ${message}`;
+cueInitBtn.addEventListener('click', async () => {
+  if (cueMonitorReady) {
+    disableCueMonitor();
+    return;
   }
+  const ok = await initCueMonitor();
+  if (!ok) return;
+  await populateCueOutputs();
+  const currentSink = cueOutputSelect.value || 'default';
+  await setCueSink(currentSink);
+  statusBadge.textContent = 'Headphone CUE initialized';
+});
+
+cueOutputSelect.addEventListener('change', () => {
+  void setCueSink(cueOutputSelect.value || 'default');
+});
+
+cueABtn.addEventListener('click', () => {
+  void setDeckCue('A', !cueEnabledDecks.A);
+});
+
+cueBBtn.addEventListener('click', () => {
+  void setDeckCue('B', !cueEnabledDecks.B);
+});
+
+cueLevelSelect.addEventListener('change', () => {
+  const level = Number(cueLevelSelect.value || '0.7');
+  engine.setCueLevel(level);
+  statusBadge.textContent = `CUE level: ${Math.round(level * 100)}%`;
 });
 
 midiLearnBtn.addEventListener('click', async () => {
@@ -598,7 +908,11 @@ midiLearnBtn.addEventListener('click', async () => {
 midiLearnCancelBtn.addEventListener('click', () => {
   midi.cancelLearn();
   statusBadge.textContent = 'MIDI Learn canceled';
+  midiLearnBtn.classList.remove('active');
+  midiLearnCancelBtn.classList.remove('active');
+  midiLearnCancelBtn.disabled = true;
   midiLearnBtn.textContent = 'MIDI LEARN';
+  midiLearnCancelBtn.classList.add('hidden-control');
 });
 
 mixerToggleBtn.addEventListener('click', () => {
@@ -609,6 +923,22 @@ mixerToggleBtn.addEventListener('click', () => {
 libraryToggleBtn.addEventListener('click', () => {
   libraryVisible = !libraryVisible;
   applyLibraryVisibility();
+});
+
+settingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const willOpen = settingsPopover.classList.contains('hidden-control');
+  setSettingsOpen(willOpen);
+});
+
+settingsPopover.addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
+document.addEventListener('click', () => {
+  if (!settingsPopover.classList.contains('hidden-control')) {
+    setSettingsOpen(false);
+  }
 });
 
 quickImportBtn.addEventListener('click', () => {
@@ -639,9 +969,14 @@ guideToggleBtn.addEventListener('click', () => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    setSettingsOpen(false);
     midi.cancelLearn();
     statusBadge.textContent = 'MIDI Learn canceled';
+    midiLearnBtn.classList.remove('active');
+    midiLearnCancelBtn.classList.remove('active');
+    midiLearnCancelBtn.disabled = true;
     midiLearnBtn.textContent = 'MIDI LEARN';
+    midiLearnCancelBtn.classList.add('hidden-control');
   }
 });
 

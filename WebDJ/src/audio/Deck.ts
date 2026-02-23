@@ -54,12 +54,15 @@ export class Deck {
 
   // mixer state
   private _volume = 0.8;
+  private _cueEnabled = false;
+  private _cueLevel = 1;
   private _tempoPercent = 0;
   private _keySemitone = 0;
   private _keyLock = false;
 
   // audio nodes
   private channelGain: GainNode;
+  private cueSendGain: GainNode;
   private stemSum: GainNode;
   private stemNodes: Record<StemName, { gain: GainNode }>;
   private stemLevels: Record<StemName, number> = {
@@ -121,6 +124,8 @@ export class Deck {
 
     this.channelGain = ctx.createGain();
     this.channelGain.gain.value = this._volume;
+    this.cueSendGain = ctx.createGain();
+    this.cueSendGain.gain.value = 0;
 
     this.stemSum = ctx.createGain();
 
@@ -180,7 +185,9 @@ export class Deck {
     this.reverbEffect.output.connect(this.filterEffect.input);
     this.filterEffect.output.connect(this.analyser);
     this.analyser.connect(this.crossfadeGain);
+    this.analyser.connect(this.cueSendGain);
     this.crossfadeGain.connect(engine.masterGain);
+    this.cueSendGain.connect(engine.cueBus);
   }
 
   on(event: DeckEventType, listener: DeckListener): void {
@@ -242,6 +249,25 @@ export class Deck {
   set volume(v: number) {
     this._volume = Math.max(0, Math.min(1, v));
     this.channelGain.gain.value = this._volume;
+  }
+
+  get cueEnabled(): boolean {
+    return this._cueEnabled;
+  }
+
+  setCueEnabled(enabled: boolean): void {
+    this._cueEnabled = enabled;
+    this.applyCueSend();
+    this.emit('statechange');
+  }
+
+  toggleCueEnabled(): void {
+    this.setCueEnabled(!this._cueEnabled);
+  }
+
+  setCueLevel(level: number): void {
+    this._cueLevel = Math.max(0, Math.min(1, level));
+    this.applyCueSend();
   }
 
   get beatInterval(): number {
@@ -381,7 +407,10 @@ export class Deck {
     this._offset = offset;
     this._playing = true;
 
-    this.stemSourceNodes.instruments!.onended = () => {
+    const instrumentSource = this.stemSourceNodes.instruments!;
+    instrumentSource.onended = () => {
+      // Ignore stale onended callbacks from previous sources (e.g. while seeking).
+      if (this.stemSourceNodes.instruments !== instrumentSource) return;
       if (this._playing) {
         this._playing = false;
         this._offset = 0;
@@ -649,6 +678,10 @@ export class Deck {
       this._offset = this.currentTime;
       this._startTime = this.engine.ctx.currentTime;
     }
+  }
+
+  private applyCueSend(): void {
+    this.cueSendGain.gain.value = this._cueEnabled ? this._cueLevel : 0;
   }
 
   private computePeaks(buffer: AudioBuffer, numPeaks: number): Float32Array {
