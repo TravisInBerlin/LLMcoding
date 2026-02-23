@@ -549,6 +549,13 @@ export class Deck {
     this.emit('statechange');
   }
 
+  clearSavedLoop(slot: number): void {
+    const idx = this.savedLoops.findIndex((s) => s.id === slot);
+    if (idx < 0) return;
+    this.savedLoops.splice(idx, 1);
+    this.emit('statechange');
+  }
+
   // Cue points
   setCuePoint(id: number): void {
     const existing = this.cuePoints.find((c) => c.id === id);

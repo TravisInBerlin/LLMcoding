@@ -4,6 +4,7 @@ import { Waveform, type WaveformMode } from '../visualizer/Waveform';
 
 const CUES_PER_BANK = 8;
 const CUE_BANK_COUNT = 2;
+const LOOP_SLOT_COUNT = 4;
 const SHOT_BUTTONS = [
   { id: 'airhorn', label: 'HORN', title: 'Airhorn one-shot' },
   { id: 'laser', label: 'LASER', title: 'Laser one-shot' },
@@ -39,6 +40,9 @@ export class DeckUI {
   private loopInBtn!: HTMLButtonElement;
   private loopOutBtn!: HTMLButtonElement;
   private loopToggleBtn!: HTMLButtonElement;
+  private loopSaveBtn!: HTMLButtonElement;
+  private loopSlotButtons: HTMLButtonElement[] = [];
+  private loopSaveArmed = false;
   private autoLoopButtons = new Map<number, HTMLButtonElement>();
   private cueButtons: HTMLButtonElement[] = [];
   private cueBankButtons: HTMLButtonElement[] = [];
@@ -119,12 +123,15 @@ export class DeckUI {
                 <button class="btn btn-loop btn-muted" id="loop-in-${side}" title="ループ開始点 ON / OFF">IN</button>
                 <button class="btn btn-loop btn-muted" id="loop-out-${side}" title="ループ終了点 ON / OFF">OUT</button>
                 <button class="btn btn-loop-toggle btn-muted" id="loop-toggle-${side}" title="ループ有効 ON / OFF">LOOP</button>
-                <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="現在のループを保存">SAVE</button>
+                <button class="btn btn-loop btn-muted" id="loop-save-${side}" title="SAVE ONで次に押すMEMへ保存">SAVE</button>
                 ${[1, 2, 4, 8, 16]
           .map((b) => `<button class="btn btn-auto-loop btn-muted" id="loop-${side}-${b}" title="${b} beat auto loop (tap again to OFF)">${b}B</button>`)
           .join('')}
               </div>
-              <div class="control-explain">IN/OUT/LOOP: 再クリックでOFF / 1B-16B: 長さ指定オートループ</div>
+              <div class="loop-memory-row">
+                ${Array.from({ length: LOOP_SLOT_COUNT }, (_, i) => `<button class="btn loop-slot-btn" id="loop-slot-${side}-${i}" title="Tap: load saved loop / Long press: clear slot">${i + 1}</button>`).join('')}
+              </div>
+              <div class="control-explain">IN/OUT/LOOP: 再クリックでOFF / SAVE: ON後にMEM保存 / MEM: タップ読込・長押し削除</div>
             </div>
 
             <div class="control-group">
@@ -194,9 +201,11 @@ export class DeckUI {
     this.loopInBtn = this.el.querySelector(`#loop-in-${side}`)!;
     this.loopOutBtn = this.el.querySelector(`#loop-out-${side}`)!;
     this.loopToggleBtn = this.el.querySelector(`#loop-toggle-${side}`)!;
+    this.loopSaveBtn = this.el.querySelector(`#loop-save-${side}`)!;
     this.autoLoopButtons = new Map(
       [1, 2, 4, 8, 16].map((beats) => [beats, this.el.querySelector(`#loop-${side}-${beats}`) as HTMLButtonElement] as const),
     );
+    this.loopSlotButtons = Array.from({ length: LOOP_SLOT_COUNT }, (_, i) => this.el.querySelector(`#loop-slot-${side}-${i}`) as HTMLButtonElement);
 
     this.cueButtons = Array.from({ length: CUES_PER_BANK }, (_, i) => this.el.querySelector(`#hot-cue-${side}-${i}`) as HTMLButtonElement);
     this.cueBankButtons = Array.from({ length: CUE_BANK_COUNT }, (_, i) => this.el.querySelector(`#cue-bank-${side}-${i}`) as HTMLButtonElement);
@@ -252,8 +261,8 @@ export class DeckUI {
       }
     });
 
-    this.el.querySelector(`#loop-save-${side}`)!.addEventListener('click', () => {
-      this.deck.saveCurrentLoop(0, 4);
+    this.loopSaveBtn.addEventListener('click', () => {
+      this.setLoopSaveArmed(!this.loopSaveArmed);
     });
 
     for (const beats of [1, 2, 4, 8, 16]) {
@@ -261,6 +270,71 @@ export class DeckUI {
         this.deck.toggleAutoLoop(beats);
       });
     }
+
+    this.loopSlotButtons.forEach((btn, slot) => {
+      let holdTimer: number | null = null;
+      let holdTriggered = false;
+
+      const clearSlot = (): void => {
+        if (!this.hasSavedLoop(slot)) return;
+        this.deck.clearSavedLoop(slot);
+        this.dispatchStatus(`Loop MEM ${slot + 1} cleared`);
+      };
+      const stopHold = (): void => {
+        if (holdTimer !== null) {
+          clearTimeout(holdTimer);
+          holdTimer = null;
+        }
+      };
+
+      btn.addEventListener('pointerdown', () => {
+        holdTriggered = false;
+        stopHold();
+        holdTimer = window.setTimeout(() => {
+          holdTriggered = true;
+          clearSlot();
+        }, 520);
+      });
+
+      btn.addEventListener('pointerup', stopHold);
+      btn.addEventListener('pointercancel', stopHold);
+      btn.addEventListener('pointerleave', stopHold);
+
+      btn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        stopHold();
+        clearSlot();
+      });
+
+      btn.addEventListener('click', () => {
+        stopHold();
+        if (holdTriggered) {
+          holdTriggered = false;
+          return;
+        }
+
+        if (this.loopSaveArmed) {
+          const hasRange = this.deck.loopIn >= 0 && this.deck.loopOut > this.deck.loopIn;
+          if (!hasRange) {
+            this.dispatchStatus('Loop SAVE: set IN/OUT first');
+            this.setLoopSaveArmed(false);
+            return;
+          }
+          this.deck.saveCurrentLoop(slot, this.deck.autoLoopBeats ?? 4);
+          this.dispatchStatus(`Loop saved to MEM ${slot + 1}`);
+          this.setLoopSaveArmed(false);
+          return;
+        }
+
+        if (!this.hasSavedLoop(slot)) {
+          this.dispatchStatus(`Loop MEM ${slot + 1} is empty`);
+          return;
+        }
+
+        this.deck.loadSavedLoop(slot);
+        this.dispatchStatus(`Loop MEM ${slot + 1} loaded`);
+      });
+    });
 
     this.cueButtons.forEach((btn, i) => {
       let holdTimer: number | null = null;
@@ -455,6 +529,7 @@ export class DeckUI {
     });
 
     this.updateCueBankUI();
+    this.setLoopSaveArmed(false);
     this.setCueClearArmed(false);
     this.syncCueState();
     this.syncLoopState();
@@ -515,6 +590,27 @@ export class DeckUI {
       const active = loopOn && this.deck.autoLoopBeats === beats;
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-pressed', String(active));
+    });
+
+    this.loopSaveBtn.classList.toggle('active', this.loopSaveArmed);
+    this.loopSaveBtn.classList.toggle('save-armed', this.loopSaveArmed);
+    this.loopSaveBtn.setAttribute('aria-pressed', String(this.loopSaveArmed));
+    this.loopSaveBtn.textContent = this.loopSaveArmed ? 'SAVE ON' : 'SAVE';
+
+    this.loopSlotButtons.forEach((btn, slot) => {
+      const saved = this.deck.savedLoops.find((s) => s.id === slot);
+      const current = Boolean(
+        saved &&
+        this.deck.loopActive &&
+        Math.abs(this.deck.loopIn - saved.inPoint) < 0.001 &&
+        Math.abs(this.deck.loopOut - saved.outPoint) < 0.001,
+      );
+      btn.classList.toggle('has-loop', Boolean(saved));
+      btn.classList.toggle('current-loop', current);
+      btn.setAttribute('aria-pressed', String(current));
+      btn.title = saved
+        ? `Tap: load loop (${saved.beats}B), long press: clear slot`
+        : 'Empty slot';
     });
   }
 
@@ -622,6 +718,19 @@ export class DeckUI {
     this.cueClearBtn.classList.toggle('active', armed);
     this.cueClearBtn.setAttribute('aria-pressed', String(armed));
     this.cueClearBtn.textContent = armed ? 'CLR ON' : 'CLR';
+  }
+
+  private setLoopSaveArmed(armed: boolean): void {
+    this.loopSaveArmed = armed;
+    this.syncLoopState();
+  }
+
+  private hasSavedLoop(slot: number): boolean {
+    return this.deck.savedLoops.some((s) => s.id === slot);
+  }
+
+  private dispatchStatus(message: string): void {
+    window.dispatchEvent(new CustomEvent('status-message', { detail: { message } }));
   }
 
   private updateVinylStyle(): void {
