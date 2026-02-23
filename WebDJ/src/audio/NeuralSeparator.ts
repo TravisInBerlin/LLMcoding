@@ -23,6 +23,12 @@ interface NeuralModelConfig {
   overlapRatio?: number;
 }
 
+const joinBasePath = (base: string, path: string): string => {
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${normalizedBase}${normalizedPath}`;
+};
+
 /**
  * NeuralSeparator
  * - Uses ONNX Runtime Web (WebGPU/WASM) when model is available.
@@ -71,7 +77,8 @@ export class NeuralSeparator {
 
     await this.loadConfig();
 
-    const modelUrl = '/models/neuralmix.onnx';
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const modelUrl = joinBasePath(baseUrl, 'models/neuralmix.onnx');
 
     const nav = typeof navigator !== 'undefined' ? (navigator as Navigator & { gpu?: unknown }) : null;
     if (nav?.gpu) {
@@ -103,7 +110,9 @@ export class NeuralSeparator {
 
   private async loadConfig(): Promise<void> {
     try {
-      const res = await fetch('/models/neuralmix.config.json', { cache: 'no-store' });
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const configUrl = joinBasePath(baseUrl, 'models/neuralmix.config.json');
+      const res = await fetch(configUrl, { cache: 'no-store' });
       if (!res.ok) return;
       const json = (await res.json()) as NeuralModelConfig;
       this.config = {

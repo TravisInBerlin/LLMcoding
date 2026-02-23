@@ -411,7 +411,16 @@ export class LibraryUI {
     const deckId = target.dataset.loadDeck as DeckId;
     const deck = this.decks.find((d) => d.id === deckId);
     if (!deck || idx < 0 || !this.tracks[idx]) return;
-    void deck.loadFile(this.tracks[idx].file);
+    const track = this.tracks[idx];
+    void deck
+      .loadFile(track.file)
+      .then(() => {
+        this.emitStatus(`Loaded "${track.name}" to Deck ${deckId}`);
+      })
+      .catch((err: unknown) => {
+        const reason = err instanceof Error ? err.message : 'unsupported or corrupted audio';
+        this.emitStatus(`Load failed: ${track.name} (${reason})`);
+      });
   }
 
   private filteredTrackIndices(filter = ''): number[] {
@@ -614,5 +623,9 @@ export class LibraryUI {
   private formatSize(bytes: number): string {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  private emitStatus(message: string): void {
+    window.dispatchEvent(new CustomEvent('status-message', { detail: { message } }));
   }
 }

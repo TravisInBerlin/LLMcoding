@@ -212,6 +212,15 @@ if (localStorage.getItem('webdj.guide.hidden') !== '0') {
 }
 
 window.addEventListener(
+  'status-message',
+  ((e: CustomEvent) => {
+    const message = typeof e.detail?.message === 'string' ? e.detail.message.trim() : '';
+    if (!message) return;
+    statusBadge.textContent = message;
+  }) as EventListener,
+);
+
+window.addEventListener(
   'sync-request',
   ((e: CustomEvent) => {
     const sourceId = e.detail.deckId as DeckId;
