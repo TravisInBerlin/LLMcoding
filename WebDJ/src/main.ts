@@ -18,7 +18,10 @@ const decks = deckIds.map((id) => new Deck(engine, id));
 const deckMap = new Map<DeckId, Deck>(decks.map((d) => [d.id, d]));
 
 const crossfader = new Crossfader(deckMap.get('A')!.crossfadeGain, deckMap.get('B')!.crossfadeGain);
-crossfader.onChange((pos) => applyCrossfaderFusion(pos));
+crossfader.onChange((pos) => {
+  enforceCrossfadeOutput(pos);
+  applyCrossfaderFusion(pos);
+});
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
 root.classList.add('mode-2');
@@ -34,6 +37,7 @@ root.innerHTML = `
     </div>
     <div class="header-actions">
       <button class="btn btn-mini btn-muted" id="midi-btn" title="MIDIコントローラーを接続/切断します">MIDI CONNECT</button>
+      <button class="btn btn-mini btn-muted" id="audio-test-btn" title="短いテストトーンを再生して音声出力を確認します">AUDIO TEST</button>
       <select id="midi-learn-target" class="midi-learn-select" title="MIDI LEARNで割り当てる操作を選択します">
         <option value="playA">Learn: Play A</option>
         <option value="playB">Learn: Play B</option>
@@ -139,6 +143,7 @@ const autoDropBtn = document.getElementById('auto-drop-btn') as HTMLButtonElemen
 const automixBtn = document.getElementById('automix-btn') as HTMLButtonElement;
 const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
 const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
+const audioTestBtn = document.getElementById('audio-test-btn') as HTMLButtonElement;
 const midiLearnBtn = document.getElementById('midi-learn-btn') as HTMLButtonElement;
 const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as HTMLButtonElement;
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
@@ -151,22 +156,6 @@ const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButton
 const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 const guidePanel = document.getElementById('guide-panel') as HTMLElement;
 midiLearnCancelBtn.disabled = true;
-
-const protectSingleDeckOutput = (activeDeckId: DeckId): void => {
-  const activeDeck = deckMap.get(activeDeckId);
-  if (!activeDeck || !activeDeck.playing) return;
-
-  const otherPlaying = decks.some((d) => d.id !== activeDeckId && d.playing);
-  if (otherPlaying) return;
-
-  if (activeDeckId === 'A' && crossfader.position > 0.97) {
-    crossfader.setPosition(0);
-    statusBadge.textContent = 'Crossfader auto-returned to A (B side silent)';
-  } else if (activeDeckId === 'B' && crossfader.position < 0.03) {
-    crossfader.setPosition(1);
-    statusBadge.textContent = 'Crossfader auto-returned to B (A side silent)';
-  }
-};
 
 const applyDeckMode = (): void => {
   root.classList.toggle('mode-2', deckMode === 2);
@@ -218,7 +207,9 @@ applyLibraryVisibility();
 (['A', 'B'] as DeckId[]).forEach((id) => {
   const deck = deckMap.get(id);
   if (!deck) return;
-  deck.on('play', () => protectSingleDeckOutput(id));
+  const syncOutput = () => enforceCrossfadeOutput(crossfader.position);
+  deck.on('play', syncOutput);
+  deck.on('pause', syncOutput);
 });
 
 if (isIPad) {
@@ -331,9 +322,33 @@ function parseKeyRoot(key: string): number | null {
   return idx < 0 ? null : idx;
 }
 
+function enforceCrossfadeOutput(pos: number): void {
+  const deckA = deckMap.get('A')!;
+  const deckB = deckMap.get('B')!;
+  const playingA = deckA.playing;
+  const playingB = deckB.playing;
+
+  if (playingA && !playingB) {
+    deckA.crossfadeGain.gain.value = 1;
+    deckB.crossfadeGain.gain.value = 0;
+    return;
+  }
+
+  if (playingB && !playingA) {
+    deckA.crossfadeGain.gain.value = 0;
+    deckB.crossfadeGain.gain.value = 1;
+    return;
+  }
+
+  const clamped = Math.max(0, Math.min(1, pos));
+  deckA.crossfadeGain.gain.value = Math.cos(clamped * Math.PI / 2);
+  deckB.crossfadeGain.gain.value = Math.sin(clamped * Math.PI / 2);
+}
+
 function applyCrossfaderFusion(pos: number): void {
   const deckA = deckMap.get('A')!;
   const deckB = deckMap.get('B')!;
+  if (!deckA.playing || !deckB.playing) return;
   const clamped = Math.max(0, Math.min(1, pos));
 
   if (transitionStyle === 'power') {
@@ -544,6 +559,32 @@ const midi = new MidiController(
 midiBtn.addEventListener('click', async () => {
   await engine.resume();
   await midi.connect();
+});
+
+audioTestBtn.addEventListener('click', async () => {
+  try {
+    await engine.resume();
+    const { ctx } = engine;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.28);
+
+    statusBadge.textContent = `AUDIO TEST sent (ctx: ${ctx.state}, ${Math.round(ctx.sampleRate)}Hz)`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown error';
+    statusBadge.textContent = `AUDIO TEST failed: ${message}`;
+  }
 });
 
 midiLearnBtn.addEventListener('click', async () => {
