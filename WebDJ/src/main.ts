@@ -644,6 +644,37 @@ const getSelectedAutoDropRoute = (): AutoDropRoute => {
   return isAutoDropRoute(selected) ? selected : 'A-B';
 };
 
+const getOppositeAutoDropRoute = (route: AutoDropRoute): AutoDropRoute => {
+  switch (route) {
+    case 'A-B':
+      return 'B-A';
+    case 'B-A':
+      return 'A-B';
+    case 'C-D':
+      return 'D-C';
+    default:
+      return 'C-D';
+  }
+};
+
+const resolveAutomixRoute = (preferred: AutoDropRoute): AutoDropRoute => {
+  const pair = getAutoDropPair(preferred);
+  const source = deckMap.get(pair.sourceId)!;
+  const target = deckMap.get(pair.targetId)!;
+
+  if (source.playing && !target.playing) return preferred;
+  if (!source.playing && target.playing) return getOppositeAutoDropRoute(preferred);
+  if (!source.playing && !target.playing) return preferred;
+
+  if (pair.usesMainCrossfader) {
+    const dominant = crossfader.position >= 0.5 ? 'B' : 'A';
+    return dominant === pair.sourceId ? preferred : getOppositeAutoDropRoute(preferred);
+  }
+
+  const dominant = source.crossfadeGain.gain.value >= target.crossfadeGain.gain.value ? pair.sourceId : pair.targetId;
+  return dominant === pair.sourceId ? preferred : getOppositeAutoDropRoute(preferred);
+};
+
 const triggerAutoDrop = async (route: AutoDropRoute): Promise<void> => {
   await runAutoDropTransition({
     route,
@@ -670,7 +701,9 @@ const setAutomix = (enabled: boolean): void => {
   if (!enabled) return;
 
   automixTimer = window.setInterval(() => {
-    void triggerAutoDrop(getSelectedAutoDropRoute());
+    const preferred = getSelectedAutoDropRoute();
+    const route = resolveAutomixRoute(preferred);
+    void triggerAutoDrop(route);
   }, 12000);
 };
 
