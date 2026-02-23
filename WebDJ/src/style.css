@@ -135,7 +135,18 @@ body {
 }
 
 .settings-btn {
-  min-width: 106px;
+  min-width: 132px;
+  font-size: 12px;
+  letter-spacing: 0.52px;
+}
+
+.auto-drop-route-select {
+  min-width: 154px;
+  text-align: center;
+  text-align-last: center;
+  padding-left: 12px;
+  padding-right: 30px;
+  background-position: 0 0, calc(100% - 18px) calc(50% - 3px), calc(100% - 13px) calc(50% - 3px);
 }
 
 .rec-btn {
@@ -196,6 +207,13 @@ body {
   font-size: 12px;
   padding: 4px 24px 4px 8px;
   min-height: 30px;
+}
+
+.settings-popover .midi-learn-select {
+  text-align: center;
+  text-align-last: center;
+  padding-left: 12px;
+  padding-right: 26px;
 }
 
 .transition-select {
@@ -633,6 +651,10 @@ body {
   gap: 5px;
 }
 
+.cue-bank-row {
+  align-items: center;
+}
+
 .cue-bank-btn.active {
   border-color: rgba(214, 235, 255, 0.78);
   color: #f0f7ff;
@@ -656,8 +678,8 @@ body {
 .cue-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 36px;
-  gap: 6px;
+  gap: 8px;
+  align-items: stretch;
 }
 
 .sfx-shot-row {
@@ -923,31 +945,35 @@ body {
 }
 
 .btn-hot-cue {
-  --pad-glow: rgba(114, 188, 255, 0.35);
+  --pad-glow: color-mix(in srgb, var(--cue-color, #66c5ff) 44%, transparent);
   position: relative;
   overflow: hidden;
-  border-radius: 10px;
-  min-height: 36px;
-  padding: 0 8px;
-  font-size: 13px;
+  border-radius: 8px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 0;
+  font-size: 15px;
   font-family: 'Archivo', sans-serif;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
   color: rgba(238, 247, 255, 0.92);
-  border-color: rgba(183, 205, 238, 0.3);
+  border-color: color-mix(in srgb, var(--cue-color, #66c5ff) 54%, rgba(183, 205, 238, 0.3));
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(196, 220, 255, 0.02) 36%, rgba(10, 16, 28, 0.86)),
-    radial-gradient(circle at 50% 118%, rgba(119, 176, 255, 0.2), rgba(6, 10, 18, 0.12) 56%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(196, 220, 255, 0.03) 35%, rgba(10, 16, 28, 0.86)),
+    radial-gradient(circle at 52% 118%, color-mix(in srgb, var(--cue-color, #66c5ff) 20%, transparent), rgba(6, 10, 18, 0.12) 58%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -2px 5px rgba(6, 9, 15, 0.86),
-    0 4px 10px rgba(0, 0, 0, 0.32);
+    inset 0 -3px 6px rgba(6, 9, 15, 0.9),
+    0 4px 9px rgba(0, 0, 0, 0.32),
+    0 0 0 1px color-mix(in srgb, var(--cue-color, #66c5ff) 18%, transparent);
 }
 
 .btn-hot-cue::before {
   content: '';
   position: absolute;
   inset: 1px 1px auto 1px;
-  height: 32%;
+  height: 30%;
   border-radius: 9px 9px 6px 6px;
   background: linear-gradient(180deg, rgba(252, 252, 255, 0.2), rgba(251, 252, 255, 0.03));
   pointer-events: none;
@@ -956,22 +982,21 @@ body {
 .btn-hot-cue::after {
   content: '';
   position: absolute;
-  right: 7px;
-  top: 50%;
-  width: 6px;
-  height: 6px;
+  right: 9px;
+  top: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  transform: translateY(-50%);
-  background: rgba(130, 144, 168, 0.6);
+  background: color-mix(in srgb, var(--cue-color, #66c5ff) 36%, rgba(130, 144, 168, 0.58));
   box-shadow: 0 0 0 1px rgba(235, 243, 255, 0.2);
   pointer-events: none;
 }
 
 .btn-hot-cue:active {
-  transform: translateY(1px);
+  transform: translateY(2px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -1px 2px rgba(8, 11, 16, 0.88),
+    inset 0 -1px 2px rgba(8, 11, 16, 0.9),
     0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
@@ -980,13 +1005,13 @@ body {
   border-color: var(--cue-color, #8de4ff);
   color: #f8fdff;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--cue-color, #8de4ff) 36%, rgba(255, 255, 255, 0.28)), color-mix(in srgb, var(--cue-color, #8de4ff) 14%, rgba(16, 24, 39, 0.82))),
-    radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--cue-color, #8de4ff) 36%, transparent), rgba(8, 13, 24, 0.32) 54%);
+    linear-gradient(180deg, color-mix(in srgb, var(--cue-color, #8de4ff) 42%, rgba(255, 255, 255, 0.28)), color-mix(in srgb, var(--cue-color, #8de4ff) 16%, rgba(16, 24, 39, 0.82))),
+    radial-gradient(circle at 52% 120%, color-mix(in srgb, var(--cue-color, #8de4ff) 45%, transparent), rgba(8, 13, 24, 0.3) 56%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -2px 5px rgba(8, 12, 18, 0.68),
+    inset 0 -3px 6px rgba(8, 12, 18, 0.68),
     0 0 0 1px color-mix(in srgb, var(--cue-color, #8de4ff) 42%, white),
-    0 0 18px color-mix(in srgb, var(--cue-color, #8de4ff) 48%, transparent);
+    0 0 18px color-mix(in srgb, var(--cue-color, #8de4ff) 55%, transparent);
 }
 
 .btn-hot-cue[aria-pressed='true']::after,
@@ -1025,6 +1050,22 @@ body {
   border-color: rgba(245, 175, 190, 0.35);
 }
 
+.btn-sfx-shot[data-sfx='siren'] {
+  border-color: rgba(255, 145, 145, 0.4);
+}
+
+.btn-sfx-shot[data-sfx='whistle'] {
+  border-color: rgba(255, 242, 139, 0.45);
+}
+
+.btn-sfx-shot[data-sfx='cowbell'] {
+  border-color: rgba(245, 196, 108, 0.44);
+}
+
+.btn-sfx-shot[data-sfx='riser'] {
+  border-color: rgba(159, 255, 208, 0.4);
+}
+
 .btn-sfx-shot.active {
   color: #faffff;
   transform: translateY(0);
@@ -1053,6 +1094,26 @@ body {
 .btn-sfx-shot[data-sfx='impact'].active {
   background: linear-gradient(180deg, rgba(255, 153, 173, 0.72), rgba(156, 66, 100, 0.46));
   box-shadow: 0 0 0 1px rgba(255, 214, 226, 0.45), 0 0 16px rgba(255, 120, 160, 0.48);
+}
+
+.btn-sfx-shot[data-sfx='siren'].active {
+  background: linear-gradient(180deg, rgba(255, 150, 146, 0.76), rgba(170, 58, 92, 0.5));
+  box-shadow: 0 0 0 1px rgba(255, 211, 214, 0.46), 0 0 18px rgba(255, 116, 142, 0.54);
+}
+
+.btn-sfx-shot[data-sfx='whistle'].active {
+  background: linear-gradient(180deg, rgba(255, 238, 129, 0.76), rgba(171, 126, 40, 0.5));
+  box-shadow: 0 0 0 1px rgba(255, 247, 198, 0.46), 0 0 18px rgba(255, 224, 107, 0.54);
+}
+
+.btn-sfx-shot[data-sfx='cowbell'].active {
+  background: linear-gradient(180deg, rgba(255, 208, 130, 0.76), rgba(167, 105, 40, 0.5));
+  box-shadow: 0 0 0 1px rgba(255, 229, 183, 0.46), 0 0 18px rgba(255, 187, 95, 0.54);
+}
+
+.btn-sfx-shot[data-sfx='riser'].active {
+  background: linear-gradient(180deg, rgba(151, 248, 200, 0.74), rgba(47, 128, 101, 0.5));
+  box-shadow: 0 0 0 1px rgba(204, 255, 233, 0.45), 0 0 18px rgba(96, 238, 184, 0.52);
 }
 
 .btn-neural-fx {
@@ -2398,7 +2459,8 @@ body {
 }
 
 .touch-mode .btn-hot-cue {
-  min-height: 40px;
+  min-height: 0;
+  font-size: 13px;
 }
 
 .touch-mode .crossfader-control {

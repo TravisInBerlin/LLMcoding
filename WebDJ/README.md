@@ -1,12 +1,13 @@
 # WebDJ NEXUS
 
-ブラウザ上で動く DJ ミックスアプリです。`djay` 風の2/4デッキ、Neural Mix系のステム操作、MIDI Learn、録音、ライブラリ管理をまとめています。
+ブラウザで動作する DJ ミックスアプリです。  
+2/4デッキ、Neural Mix系ステム操作、MIDI Learn、録音、ライブラリ、DJ SHOTS を搭載しています。
 
 ## 動作環境
 
-- Node.js 18 以上推奨
-- Safari / Chrome / Edge (最新)
-- MIDI コントローラー使用時: Web MIDI API 対応ブラウザ
+- Node.js 18 以上
+- Safari / Chrome / Edge (最新版)
+- MIDI機器使用時は Web MIDI API 対応ブラウザ
 
 ## セットアップ
 
@@ -16,7 +17,7 @@ npm run dev
 ```
 
 - 開発URL: `http://localhost:5173`
-- 同一LANからアクセスする場合: `http://<PCのIP>:5173`
+- LAN共有: `http://<PCのIP>:5173`
 
 本番ビルド:
 
@@ -25,38 +26,45 @@ npm run build
 npm run preview
 ```
 
-## 最短スタート (3分)
+## 最短スタート
 
-1. 右上の `ADD FILES` か右下の `+ ADD FILES` で曲を取り込む
-2. `LIBRARY` タブの曲カードで `A` or `B` を押してデッキにロード
-3. 各デッキの `PLAY` で再生
-4. 必要なら `SYNC` と `KEY MATCH` でテンポ/キーを合わせる
-5. 中央下のクロスフェーダーで A/B をミックス
-6. 録音する場合は `REC START` を押す（再度押すと停止して書き出し）
+1. 右下 `+ ADD FILES` から曲を取り込む
+2. `LIBRARY` の各曲で `A/B/C/D` を押してデッキにロード
+3. `PLAY` で再生
+4. 必要なら `SYNC` / `KEY MATCH` で合わせる
+5. クロスフェーダーか `AUTO DROP` で遷移
+6. 録音は `REC START`
 
 ## 画面構成
 
-- 上部ヘッダー: 全体切替・MIDI・録音
-- 左右デッキ: 再生/ループ/ホットキュー/テンポ/キー
-- 中央ミキサー: EQ/FX/ステム/チャンネルボリューム/VU/XY FX/クロスフェーダー
-- 下部ライブラリ: 曲管理・履歴・プレイリスト系ビュー
+- ヘッダー: デッキ表示、波形表示、ライブラリ表示、AUTO DROP、FEATURES、録音
+- 左右デッキ: 波形、TRANSPORT、LOOP、HOT CUE、DJ SHOTS、TEMPO/KEY
+- 中央ミキサー: EQ/Stem/FX、VOL/VU、XY FX、クロスフェーダー
+- 下部ライブラリ: Library / History / Playlists / My Files / Downloaded / Neural Mix
 
-## 上部ボタン一覧
+## ヘッダー操作
 
-- `MIDI CONNECT`: MIDI機器を接続
-- `Learn: ...`: MIDI Learn の割当対象を選択
-- `MIDI LEARN`: 次に受けた MIDI 入力を対象へ割当
-- `LEARN CANCEL`: 学習モード中断（`Esc` でも可）
-- `MIXER HIDE`: 中央ミキサー表示切替
-- `LIBRARY HIDE`: 下部ライブラリ表示切替
-- `ADD FILES`: 曲取り込みダイアログを開く
-- `4 DECK` / `2 DECK`: デッキ表示数切替
-- `WAVE: H` / `WAVE: V`: 波形表示方向切替
-- `XFADE: SMOOTH/POWER/NEURAL`: クロスフェード特性
-- `AUTO DROP`: A/B 自動トランジションを1回実行
-- `AUTOMIX ON/OFF`: 一定間隔の自動トランジション
-- `GUIDE`: 操作ガイド表示
-- `REC START`: マスター録音開始/停止
+- `4 DECK` / `2 DECK`: 2デッキ・4デッキ切替
+- `WAVE: H` / `WAVE: V`: 波形の水平/垂直切替
+- `LIB: ON/OFF`: ライブラリ表示切替
+- `AUTO: A->B / B->A / C->D / D->C`: AUTO DROPルート選択
+- `AUTO DROP`: 選択ルートで自動遷移を1回実行
+- `FEATURES`: MIDI/CUE/XFADE/AUTOMIX 等の詳細パネル表示
+- `REC START`: マスター録音の開始/停止
+
+## FEATURES パネル
+
+- `MIDI CONNECT`: MIDI接続
+- `CUE OUT`: ヘッドホンCUE初期化
+- `CUE: ...`: CUE出力先選択（setSinkId対応時）
+- `CUE A OFF / CUE B OFF`: デッキ別CUE送出
+- `CUE LV`: CUE音量
+- `Learn: ...`: MIDI Learn対象
+- `MIDI LEARN` / `LEARN CANCEL`
+- `MIXER HIDE`
+- `XFADE: SMOOTH / POWER / NEURAL`
+- `GUIDE`
+- `AUTOMIX ON/OFF`
 
 ## デッキ操作
 
@@ -64,181 +72,106 @@ npm run preview
 
 - `CUE`: 先頭へ戻る
 - `PLAY`: 再生/停止
-- `SYNC`: 反対デッキへ BPM 同期
-- `KEY MATCH`: 反対デッキへキー同期
-- `KEY LOCK`: ON でテンポ変更時に音程維持
+- `SYNC`: 他デッキBPMへ同期
+- `KEY MATCH`: 他デッキキーへ同期
+- `KEY LOCK`: テンポ変更時の音程維持
 
 ### LOOP
 
-- `IN`: ループ開始点 ON/OFF
-- `OUT`: ループ終了点 ON/OFF
-- `LOOP`: ループ有効 ON/OFF
-- `SAVE`: 現在のループ保存
-- `1B/2B/4B/8B/16B`: 指定長オートループ（再クリックでOFF）
+- `IN` / `OUT` / `LOOP`: ループ範囲と有効化（再クリックでOFF）
+- `SAVE`: ループ保存
+- `1B / 2B / 4B / 8B / 16B`: オートループ長
 
-### HOT CUE
+### HOT CUE (実装更新)
 
-- `1-4 / 5-8 / 9-12 / 13-16`: キューバンク切替
-- 数字パッド: タップ1回でセット、もう1回で解除
+- バンク: `1-8` / `9-16`
+- 常時 8 PAD 表示
+- PAD操作:
+  - 未設定PADタップ: セット
+  - 設定済PADタップ: ジャンプ
+  - PAD長押し: 解除
+- `CLR`: ON時、次に押した設定済PADを削除
 
-### 右側ノブ
+### DJ SHOTS (実装更新)
 
-- `TEMPO (速度)`: `-75%` ～ `+75%`
-- `KEY SHIFT (半音)`: ピッチを半音単位で変更
+ワンタップで効果音:
 
-## ミキサー操作
+- `HORN`
+- `LASER`
+- `CLAP`
+- `IMPACT`
+- `SIREN`
+- `WHISTLE`
+- `BELL`
+- `RISER`
 
-### ラベルの意味
+## AUTO DROP と AUTOMIX
 
-- `HI`: High EQ
-- `MID`: Mid EQ
-- `LOW`: Low EQ
-- `FLT`: Tone Filter
-- `DRM`: Drums ステム
-- `INS`: Instruments ステム
-- `VOC`: Vocals ステム
-- `ECHO`: Echo量
-- `RVB`: Reverb量
-- `FX FLT`: FX Filter量
+### AUTO DROP
 
-### チャンネル
+- 手動一発遷移
+- ルート選択に応じて `A->B / B->A / C->D / D->C` で実行
+- 遷移時にBPM/Key補正とFX補助を適用
 
-- `VOCAL ECHO` / `DRUM FILTER`: Neural FX トグル
-- `MUTE` / `SOLO` / `RESET`: チャンネル制御
-- `MIX MACRO`: `BASS CUT`, `BRIGHT+`, `VOCAL FOCUS`, `DRUM FOCUS`
-- `VOL`: チャンネル音量
-- `VU`: 出力レベルメーター
+### AUTOMIX ON の挙動
 
-### XY FX
-
-- 左右A/Bそれぞれのパッドで同時操作
-- X軸: Filter
-- Y軸: Reverb
-- ダブルクリック: センターにリセット
-
-### クロスフェーダー
-
-- 最下部 `A ↔ B` スライダー
-- `A` 側で Deck A が強く、`B` 側で Deck B が強くなる
-
-## ライブラリ操作
-
-下部サイドバーは以下のビュー切替です。
-
-- `Library`: 全トラック一覧
-- `History`: デッキへのロード履歴
-- `Playlists`: BPMベースのスマート分類
-- `My Files`: 取り込み済みファイル一覧
-- `Downloaded`: ローカルキャッシュ扱い一覧
-- `Neural Mix`: 各デッキのステム状態
-
-共通操作:
-
-- 検索ボックス: `Library / My Files / Downloaded` で有効
-- 曲の `A/B/C/D` ボタン: 対象デッキへロード
-- ドラッグ&ドロップ: `Library` ビューの Drop 領域に音声ファイルを投下
-
-## DJとしてのおすすめ運用
-
-### セット開始前の準備
-
-1. 使う候補曲を `Library` に取り込み、A/Bに2曲以上ロードして事前チェック
-2. `WAVE: H` で全体構成確認、細かいキュー作業時だけ `WAVE: V` に切替
-3. 各曲で `HOT CUE` を最低3点打つ
-4. `VOL` を上げすぎず、`VU` が常時振り切れないように調整
-
-### 安定してつなぐ基本フロー
-
-1. 再生中デッキを基準に、次曲デッキで `SYNC`
-2. 必要な場合のみ `KEY MATCH`（不自然に感じたら戻す）
-3. 先に次曲の `LOW` を少し下げる
-4. クロスフェーダーを8〜16小節でゆっくり移動
-5. 切替完了後、前曲側の `LOW`/`FX` を戻して次の準備
-
-### ミスしにくい設定のコツ
-
-- `XFADE: SMOOTH`: 通常運用向け
-- `XFADE: POWER`: ドロップを強調したい時
-- `XFADE: NEURAL`: ボーカル/ドラムを分けた演出ミックス向け
-- 長時間プレイは `REC START` で常時録音して保険をかける
-
-## 実戦マニュアル（シーン別）
-
-### 1. オープニング（ウォームアップ）
-
-1. BPM差が小さい曲同士で開始
-2. `BASS CUT` を使い、低域の濁りを抑えて導入
-3. `RVB` を軽く足して空間を作る
-
-### 2. サビ前のビルドアップ
-
-1. 次曲を `PLAY` して `VOL` を低めで待機
-2. `FX FLT` か XY PAD のX軸で徐々に帯域を絞る
-3. 直前でクロスフェーダーをセンターへ寄せる
-
-### 3. ドロップ切替
-
-1. `AUTO DROP` を使うか、手動で一気にクロスフェード
-2. ドロップ時は `POWER` か `DRUM FOCUS` が有効
-3. 切替後に不要FXをオフ、`RESET` でチャンネル整形
-
-### 4. ボーカル被り回避
-
-1. 片側の `VOC` を下げる
-2. もう片側は `VOCAL FOCUS` か `VOCAL ECHO` を使う
-3. 2〜4小節で主役ボーカルを入れ替える
-
-### 5. 緊急リカバリー（ズレた/濁った）
-
-1. いったん `LOW` をどちらか片側だけ残す
-2. 位相感が悪い時は `KEY MATCH` を解除し再確認
-3. 危ない時は `LOOP` 4Bで時間を作って立て直す
+- 12秒ごとに `AUTO` で選択中のルートを自動実行
+- 実行フロー:
+  1. ルート対象の2デッキがロード済みか確認
+  2. 両方停止ならソース側を再生開始
+  3. ターゲット未再生ならBPM同期・キー補正して再生
+  4. XFADEスタイルに応じたFXでフェード遷移
+- OFFで自動実行停止
 
 ## MIDI Learn
 
-割当可能な主なターゲット:
+割当対象:
 
-- `Play/Cue/Sync/KeyMatch` (A/B)
-- `Crossfader`
-- `Volume/Tempo/Filter` (A/B)
-- `Stem Vocal/Drums/Instruments` (A/B)
+- Play/Cue/Sync/KeyMatch (A/B)
+- Crossfader
+- Volume/Tempo/Filter (A/B)
+- Stem Vocal/Drums/Instruments (A/B)
 
 手順:
 
 1. `MIDI CONNECT`
 2. `Learn: ...` で対象選択
 3. `MIDI LEARN`
-4. コントローラー側でノブ/パッド操作
+4. コントローラーを操作
 
 ## 録音
 
-- `REC START` で録音開始
-- 再度押すと停止して自動ダウンロード
-- ブラウザごとに対応コーデックが異なるため、出力拡張子は環境により変わります（`webm` / `m4a` など）
+- `REC START` で開始
+- 再度押すと停止し自動ダウンロード
+- 出力拡張子は環境で変動 (`webm` / `m4a` など)
 
 ## トラブルシュート
 
-### ボタンを押しても反応しない
-
-- ハードリロード (`Shift + Reload`) を実行
-- 開発サーバーを再起動
+### ボタン反応がおかしい
 
 ```bash
 pkill -f vite
 npm run dev
 ```
 
-### Safari で音が出ない
+その後 `Shift + Reload` でハードリロード。
 
-- 画面を一度タップ/クリックしてから再生
-- それでも無音なら、別タブで自動再生ブロックや出力先デバイス設定を確認
+### Safari で無音
 
-### 4 Deck が切り替わらない
+- 最初に画面を1回タップして AudioContext を開始
+- 出力先デバイスとブラウザ自動再生設定を確認
 
-- URL が古いサーバー (`:5174` など) になっていないか確認
-- `http://localhost:5173` へアクセスし直す
+### 4 DECK 切替できない
 
-## 補足
+- 古いポートに接続していないか確認
+- `http://localhost:5173` を再読込
 
-- Neural 分離はローカル推論のため、初回解析は重くなる場合があります
-- `XFADE: NEURAL` は演出重視で、通常より遷移が長めです
+## コード構成 (リファクタリング後)
+
+- `src/main.ts`: UI初期化とイベント配線
+- `src/audio/AutoDrop.ts`: AUTO DROP/AUTOMIX遷移ロジック
+- `src/audio/SfxEngine.ts`: DJ SHOTS効果音生成
+- `src/audio/cuePalette.ts`: HOT CUEカラー共通定義
+- `src/ui/*`: Deck/Mixer/Library UI
+
+この構成により、機能追加時の影響範囲を分離しやすくしています。
