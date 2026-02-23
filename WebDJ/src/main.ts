@@ -1,6 +1,15 @@
 import { AudioEngine } from './audio/AudioEngine';
 import { Deck, type DeckId } from './audio/Deck';
 import { Crossfader } from './audio/Crossfader';
+import {
+  AUTO_DROP_ROUTES,
+  getAutoDropPair,
+  isAutoDropRoute,
+  runAutoDropTransition,
+  type AutoDropRoute,
+  type TransitionStyle,
+} from './audio/AutoDrop';
+import { isSfxName, triggerSfx } from './audio/SfxEngine';
 import { DeckUI } from './ui/DeckUI';
 import { MixerUI } from './ui/MixerUI';
 import { LibraryUI } from './ui/LibraryUI';
@@ -8,10 +17,8 @@ import { MidiController, type MidiLearnTarget } from './midi/MidiController';
 import type { WaveformMode } from './visualizer/Waveform';
 import './style.css';
 
-type TransitionStyle = 'smooth' | 'power' | 'neural';
 let transitionStyle: TransitionStyle = 'smooth';
 type CueDeckId = 'A' | 'B';
-type SfxName = 'airhorn' | 'laser' | 'clap' | 'impact';
 
 type SinkCapableMediaElement = HTMLMediaElement & {
   setSinkId: (sinkId: string) => Promise<void>;
@@ -33,6 +40,12 @@ const root = document.querySelector<HTMLDivElement>('#app')!;
 root.classList.add('mode-2');
 const isTouch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
+const autoDropRouteLabels: Record<AutoDropRoute, string> = {
+  'A-B': 'AUTO: A -> B',
+  'B-A': 'AUTO: B -> A',
+  'C-D': 'AUTO: C -> D',
+  'D-C': 'AUTO: D -> C',
+};
 if (isTouch) root.classList.add('touch-mode');
 if (isIPad) root.classList.add('ipad-mode');
 root.innerHTML = `
@@ -45,10 +58,13 @@ root.innerHTML = `
       <button class="btn btn-mini btn-muted topbar-toggle" id="deck-mode-btn" title="2デッキ/4デッキを切り替えます">4 DECK</button>
       <button class="btn btn-mini btn-muted topbar-toggle" id="waveform-mode-btn" title="波形表示を横/縦で切り替えます">WAVE: H</button>
       <button class="btn btn-mini btn-muted topbar-toggle" id="library-toggle-btn" title="ライブラリパネルの表示/非表示を切り替えます">LIB: ON</button>
-      <button class="btn btn-mini btn-accent" id="header-import-btn" title="曲ファイルを取り込む">ADD FILES</button>
+      <select id="auto-drop-route" class="midi-learn-select auto-drop-route-select" title="AUTO DROPの遷移方向を選択します">
+        ${AUTO_DROP_ROUTES.map((route) => `<option value="${route}">${autoDropRouteLabels[route]}</option>`).join('')}
+      </select>
+      <button class="btn btn-mini btn-accent" id="auto-drop-btn" title="選択したペアで自動トランジションを一回実行します">AUTO DROP</button>
     </div>
     <div class="topbar-right">
-      <button class="btn btn-mini btn-muted settings-btn" id="settings-btn" title="MIDI/CUE/詳細設定">⚙ SETTINGS</button>
+      <button class="btn btn-mini btn-muted settings-btn" id="settings-btn" title="MIDI/CUE/機能設定">FEATURES</button>
       <button class="btn btn-mini btn-cue rec-btn" id="record-btn" title="マスター出力の録音開始/停止">REC START</button>
     </div>
     <div class="settings-popover hidden-control" id="settings-popover">
@@ -97,7 +113,6 @@ root.innerHTML = `
           <option value="power">XFADE: POWER</option>
           <option value="neural">XFADE: NEURAL</option>
         </select>
-        <button class="btn btn-mini btn-accent" id="auto-drop-btn" title="A/Bの自動トランジションを一回実行します">AUTO DROP</button>
         <button class="btn btn-mini btn-muted" id="guide-toggle-btn" title="操作ガイドの表示/非表示を切り替えます">GUIDE</button>
         <button class="btn btn-mini btn-key" id="automix-btn" title="定期自動ミックスのON/OFFを切り替えます">AUTOMIX OFF</button>
       </div>
@@ -154,6 +169,7 @@ let libraryVisible = true;
 
 const deckModeBtn = document.getElementById('deck-mode-btn') as HTMLButtonElement;
 const waveformModeBtn = document.getElementById('waveform-mode-btn') as HTMLButtonElement;
+const autoDropRouteSelect = document.getElementById('auto-drop-route') as HTMLSelectElement;
 const transitionStyleSelect = document.getElementById('transition-style') as HTMLSelectElement;
 const autoDropBtn = document.getElementById('auto-drop-btn') as HTMLButtonElement;
 const automixBtn = document.getElementById('automix-btn') as HTMLButtonElement;
@@ -171,7 +187,6 @@ const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as H
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
 const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
 const libraryToggleBtn = document.getElementById('library-toggle-btn') as HTMLButtonElement;
-const headerImportBtn = document.getElementById('header-import-btn') as HTMLButtonElement;
 const quickImportBtn = document.getElementById('quick-import-btn') as HTMLButtonElement;
 const globalFilePicker = document.getElementById('global-file-picker') as HTMLInputElement;
 const guideToggleBtn = document.getElementById('guide-toggle-btn') as HTMLButtonElement;
@@ -317,118 +332,6 @@ const setDeckCue = async (deckId: CueDeckId, enabled: boolean): Promise<void> =>
   statusBadge.textContent = activeDecks ? `Headphone CUE: ${activeDecks}` : 'Headphone CUE: OFF';
 };
 
-const sfxNames: SfxName[] = ['airhorn', 'laser', 'clap', 'impact'];
-const isSfxName = (value: unknown): value is SfxName => typeof value === 'string' && sfxNames.includes(value as SfxName);
-
-const createNoiseSource = (durationSec: number): AudioBufferSourceNode => {
-  const ctx = engine.ctx;
-  const length = Math.max(1, Math.floor(ctx.sampleRate * durationSec));
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i++) {
-    data[i] = (Math.random() * 2 - 1) * (1 - i / length);
-  }
-  const src = ctx.createBufferSource();
-  src.buffer = buffer;
-  return src;
-};
-
-const triggerSfx = async (name: SfxName): Promise<void> => {
-  await engine.resume();
-  const ctx = engine.ctx;
-  const now = ctx.currentTime + 0.003;
-
-  if (name === 'airhorn') {
-    const master = ctx.createGain();
-    const tone = ctx.createBiquadFilter();
-    const oscA = ctx.createOscillator();
-    const oscB = ctx.createOscillator();
-    master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.2, now + 0.012);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
-    tone.type = 'bandpass';
-    tone.frequency.setValueAtTime(780, now);
-    tone.Q.value = 1.1;
-    oscA.type = 'sawtooth';
-    oscB.type = 'square';
-    oscA.frequency.setValueAtTime(560, now);
-    oscA.frequency.linearRampToValueAtTime(460, now + 0.44);
-    oscB.frequency.setValueAtTime(820, now);
-    oscB.frequency.linearRampToValueAtTime(700, now + 0.44);
-    oscA.connect(tone);
-    oscB.connect(tone);
-    tone.connect(master);
-    master.connect(engine.masterGain);
-    oscA.start(now);
-    oscB.start(now);
-    oscA.stop(now + 0.5);
-    oscB.stop(now + 0.5);
-    return;
-  }
-
-  if (name === 'laser') {
-    const gain = ctx.createGain();
-    const osc = ctx.createOscillator();
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'highpass';
-    filter.frequency.value = 220;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.24, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(1800, now);
-    osc.frequency.exponentialRampToValueAtTime(140, now + 0.28);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(engine.masterGain);
-    osc.start(now);
-    osc.stop(now + 0.32);
-    return;
-  }
-
-  if (name === 'clap') {
-    const delays = [0, 0.038, 0.076];
-    delays.forEach((offset, idx) => {
-      const src = createNoiseSource(0.13);
-      const hp = ctx.createBiquadFilter();
-      const bp = ctx.createBiquadFilter();
-      const gain = ctx.createGain();
-      hp.type = 'highpass';
-      hp.frequency.value = 850;
-      bp.type = 'bandpass';
-      bp.frequency.value = 1700;
-      bp.Q.value = 0.9;
-      const start = now + offset;
-      const level = idx === 0 ? 0.22 : idx === 1 ? 0.16 : 0.12;
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(level, start + 0.004);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.08);
-      src.connect(hp);
-      hp.connect(bp);
-      bp.connect(gain);
-      gain.connect(engine.masterGain);
-      src.start(start);
-      src.stop(start + 0.11);
-    });
-    return;
-  }
-
-  const src = createNoiseSource(0.95);
-  const lp = ctx.createBiquadFilter();
-  const gain = ctx.createGain();
-  lp.type = 'lowpass';
-  lp.frequency.setValueAtTime(260, now);
-  lp.frequency.exponentialRampToValueAtTime(65, now + 0.8);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.26, now + 0.018);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.88);
-  src.connect(lp);
-  lp.connect(gain);
-  gain.connect(engine.masterGain);
-  src.start(now);
-  src.stop(now + 0.92);
-};
-
 engine.setCueLevel(Number(cueLevelSelect.value || '0.7'));
 deckMap.get('A')?.setCueLevel(1);
 deckMap.get('B')?.setCueLevel(1);
@@ -448,7 +351,7 @@ window.addEventListener(
   ((e: CustomEvent) => {
     const raw = e.detail?.sfx;
     if (!isSfxName(raw)) return;
-    void triggerSfx(raw);
+    void triggerSfx(engine, raw);
     statusBadge.textContent = `DJ FX: ${raw.toUpperCase()}`;
   }) as EventListener,
 );
@@ -703,6 +606,24 @@ transitionStyleSelect.addEventListener('change', () => {
 let automixEnabled = false;
 let automixTimer: number | null = null;
 
+const getSelectedAutoDropRoute = (): AutoDropRoute => {
+  const selected = autoDropRouteSelect?.value;
+  return isAutoDropRoute(selected) ? selected : 'A-B';
+};
+
+const triggerAutoDrop = async (route: AutoDropRoute): Promise<void> => {
+  await runAutoDropTransition({
+    route,
+    transitionStyle,
+    deckMap,
+    crossfader,
+    parseKeyRoot,
+    onStatus: (message) => {
+      statusBadge.textContent = message;
+    },
+  });
+};
+
 const setAutomix = (enabled: boolean): void => {
   automixEnabled = enabled;
   automixBtn.textContent = enabled ? 'AUTOMIX ON' : 'AUTOMIX OFF';
@@ -716,94 +637,22 @@ const setAutomix = (enabled: boolean): void => {
   if (!enabled) return;
 
   automixTimer = window.setInterval(() => {
-    void runAutoDropTransition();
+    void triggerAutoDrop(getSelectedAutoDropRoute());
   }, 12000);
 };
-
-async function runAutoDropTransition(): Promise<void> {
-  const deckA = deckMap.get('A')!;
-  const deckB = deckMap.get('B')!;
-
-  if (!deckA.buffer || !deckB.buffer) {
-    statusBadge.textContent = 'Auto Drop: load tracks on A/B first';
-    return;
-  }
-
-  if (!deckA.playing && !deckB.playing) {
-    await deckA.play();
-    crossfader.setPosition(0);
-    statusBadge.textContent = 'Auto Drop: started Deck A';
-    return;
-  }
-
-  const source = deckA.playing ? deckA : deckB;
-  const target = source.id === 'A' ? deckB : deckA;
-
-  if (!target.playing) {
-    if (source.bpm > 0) target.syncTo(source.bpm);
-
-    const srcRoot = parseKeyRoot(source.musicalKey);
-    const tgtRoot = parseKeyRoot(target.musicalKey);
-    if (srcRoot !== null && tgtRoot !== null) {
-      let diff = srcRoot - tgtRoot;
-      if (diff > 6) diff -= 12;
-      if (diff < -6) diff += 12;
-      target.matchKey(diff);
-    }
-    await target.play();
-  }
-
-  const to = target.id === 'A' ? 0 : 1;
-  const from = crossfader.position;
-  const baseDuration = transitionStyle === 'power' ? 3600 : transitionStyle === 'neural' ? 5600 : 6800;
-
-  if (transitionStyle === 'power') {
-    source.effects[0].setWet(0.42);
-    source.effects[2].setWet(0.25);
-    target.effects[1].setWet(0.24);
-  } else if (transitionStyle === 'neural') {
-    source.setStemLevel('vocals', Math.min(source.getStemLevel('vocals'), 0.45));
-    target.setStemLevel('drums', 1);
-    target.setStemLevel('instruments', Math.max(0.72, target.getStemLevel('instruments')));
-    target.effects[0].setWet(0.2);
-  } else {
-    source.effects[0].setWet(0.26);
-    target.effects[1].setWet(0.16);
-  }
-
-  fadeCrossfader(from, to, baseDuration);
-
-  window.setTimeout(() => {
-    source.effects[0].setWet(0);
-    source.effects[1].setWet(0);
-    source.effects[2].setWet(0);
-    target.effects[0].setWet(0);
-    target.effects[1].setWet(0);
-    target.effects[2].setWet(0);
-  }, baseDuration + 400);
-
-  statusBadge.textContent = `Auto Drop: ${source.id} -> ${target.id} (${transitionStyle.toUpperCase()})`;
-}
-
-function fadeCrossfader(from: number, to: number, durationMs: number): void {
-  const start = performance.now();
-
-  const step = (now: number) => {
-    const t = Math.min(1, (now - start) / durationMs);
-    const eased = t * t * (3 - 2 * t);
-    crossfader.setPosition(from + (to - from) * eased);
-    if (t < 1) requestAnimationFrame(step);
-  };
-
-  requestAnimationFrame(step);
-}
 
 automixBtn.addEventListener('click', () => {
   setAutomix(!automixEnabled);
 });
 
 autoDropBtn.addEventListener('click', () => {
-  void runAutoDropTransition();
+  void triggerAutoDrop(getSelectedAutoDropRoute());
+});
+
+autoDropRouteSelect.addEventListener('change', () => {
+  const route = getSelectedAutoDropRoute();
+  const pair = getAutoDropPair(route);
+  statusBadge.textContent = `Auto Drop route: ${pair.sourceId} -> ${pair.targetId}`;
 });
 
 const midi = new MidiController(
@@ -942,10 +791,6 @@ document.addEventListener('click', () => {
 });
 
 quickImportBtn.addEventListener('click', () => {
-  openFileImport();
-});
-
-headerImportBtn.addEventListener('click', () => {
   openFileImport();
 });
 

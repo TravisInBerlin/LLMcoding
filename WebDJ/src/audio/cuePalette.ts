@@ -1,0 +1,18 @@
+export const CUE_COLOR_PALETTE = [
+  '#ff3d6e',
+  '#ff8f1f',
+  '#ffd43a',
+  '#84f462',
+  '#2ef0c9',
+  '#27b7ff',
+  '#7b6dff',
+  '#f355ff',
+  '#ff5caa',
+  '#ff6b00',
+  '#a6ff00',
+  '#00ffe8',
+  '#00c2ff',
+  '#4f79ff',
+  '#b35bff',
+  '#ff47b8',
+] as const;

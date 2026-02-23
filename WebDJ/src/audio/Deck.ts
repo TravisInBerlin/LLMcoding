@@ -3,6 +3,7 @@ import { EchoEffect, ReverbEffect, FilterEffect } from './Effects';
 import type { EffectNode } from './Effects';
 import { detectBPM } from './BPMDetector';
 import { NeuralSeparator, type SeparationMode } from './NeuralSeparator';
+import { CUE_COLOR_PALETTE } from './cuePalette';
 
 export type DeckId = 'A' | 'B' | 'C' | 'D';
 
@@ -550,25 +551,6 @@ export class Deck {
 
   // Cue points
   setCuePoint(id: number): void {
-    const colors = [
-      '#f94144',
-      '#f3722c',
-      '#f8961e',
-      '#f9c74f',
-      '#90be6d',
-      '#43aa8b',
-      '#4d908e',
-      '#577590',
-      '#277da1',
-      '#5a189a',
-      '#9d4edd',
-      '#ff0054',
-      '#00e5ff',
-      '#7bdff2',
-      '#00f5d4',
-      '#b8f2e6',
-    ];
-
     const existing = this.cuePoints.find((c) => c.id === id);
     if (existing) {
       existing.position = this.currentTime;
@@ -576,7 +558,7 @@ export class Deck {
       this.cuePoints.push({
         id,
         position: this.currentTime,
-        color: colors[id % colors.length],
+        color: CUE_COLOR_PALETTE[id % CUE_COLOR_PALETTE.length],
       });
     }
     this.emit('statechange');

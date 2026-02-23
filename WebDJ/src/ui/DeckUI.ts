@@ -1,5 +1,19 @@
 import { Deck } from '../audio/Deck';
+import { CUE_COLOR_PALETTE } from '../audio/cuePalette';
 import { Waveform, type WaveformMode } from '../visualizer/Waveform';
+
+const CUES_PER_BANK = 8;
+const CUE_BANK_COUNT = 2;
+const SHOT_BUTTONS = [
+  { id: 'airhorn', label: 'HORN', title: 'Airhorn one-shot' },
+  { id: 'laser', label: 'LASER', title: 'Laser one-shot' },
+  { id: 'clap', label: 'CLAP', title: 'Clap one-shot' },
+  { id: 'impact', label: 'IMPACT', title: 'Impact one-shot' },
+  { id: 'siren', label: 'SIREN', title: 'Siren one-shot' },
+  { id: 'whistle', label: 'WHISTLE', title: 'Whistle one-shot' },
+  { id: 'cowbell', label: 'BELL', title: 'Cowbell one-shot' },
+  { id: 'riser', label: 'RISER', title: 'Riser one-shot' },
+] as const;
 
 export class DeckUI {
   private deck: Deck;
@@ -116,24 +130,25 @@ export class DeckUI {
             <div class="control-group">
               <div class="control-label">HOT CUE</div>
               <div class="cue-bank-row">
-                ${Array.from({ length: 4 }, (_, i) => `<button class="btn cue-bank-btn ${i === 0 ? 'active' : ''}" id="cue-bank-${side}-${i}" title="Show cues ${i * 4 + 1}-${i * 4 + 4}">${i * 4 + 1}-${i * 4 + 4}</button>`).join('')}
+                ${Array.from({ length: CUE_BANK_COUNT }, (_, i) => {
+                  const from = i * CUES_PER_BANK + 1;
+                  const to = from + CUES_PER_BANK - 1;
+                  return `<button class="btn cue-bank-btn ${i === 0 ? 'active' : ''}" id="cue-bank-${side}-${i}" title="Show cues ${from}-${to}">${from}-${to}</button>`;
+                }).join('')}
                 <button class="btn cue-clear-btn" id="cue-clear-${side}" title="CLR ONで次のタップを削除にする">CLR</button>
               </div>
               <div class="cue-points cue-grid" id="cue-grid-${side}">
-                ${Array.from({ length: 4 }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Tap: set/jump, long press: clear">${i + 1}</button>`).join('')}
+                ${Array.from({ length: CUES_PER_BANK }, (_, i) => `<button class="btn btn-hot-cue" id="hot-cue-${side}-${i}" title="Tap: set/jump, long press: clear">${i + 1}</button>`).join('')}
               </div>
-              <div class="control-explain">Hot Cue: タップ=セット/ジャンプ、長押し=解除、CLR=次のタップで削除</div>
+              <div class="control-explain">Hot Cue: 8PAD表示 / タップ=セット/ジャンプ / 長押し=解除 / CLR=次のタップで削除</div>
             </div>
 
             <div class="control-group">
               <div class="control-label">DJ SHOTS</div>
               <div class="sfx-shot-row">
-                <button class="btn btn-sfx-shot" data-sfx="airhorn" id="sfx-airhorn-${side}" title="Airhorn one-shot">HORN</button>
-                <button class="btn btn-sfx-shot" data-sfx="laser" id="sfx-laser-${side}" title="Laser one-shot">LASER</button>
-                <button class="btn btn-sfx-shot" data-sfx="clap" id="sfx-clap-${side}" title="Clap one-shot">CLAP</button>
-                <button class="btn btn-sfx-shot" data-sfx="impact" id="sfx-impact-${side}" title="Impact one-shot">IMPACT</button>
+                ${SHOT_BUTTONS.map((shot) => `<button class="btn btn-sfx-shot" data-sfx="${shot.id}" id="sfx-${shot.id}-${side}" title="${shot.title}">${shot.label}</button>`).join('')}
               </div>
-              <div class="control-explain">DJ FX: ワンタップで効果音</div>
+              <div class="control-explain">DJ FX: 連打対応ワンタップ効果音（Party向けSIREN/WHISTLE/RISER追加）</div>
             </div>
           </div>
 
@@ -183,8 +198,8 @@ export class DeckUI {
       [1, 2, 4, 8, 16].map((beats) => [beats, this.el.querySelector(`#loop-${side}-${beats}`) as HTMLButtonElement] as const),
     );
 
-    this.cueButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#hot-cue-${side}-${i}`) as HTMLButtonElement);
-    this.cueBankButtons = Array.from({ length: 4 }, (_, i) => this.el.querySelector(`#cue-bank-${side}-${i}`) as HTMLButtonElement);
+    this.cueButtons = Array.from({ length: CUES_PER_BANK }, (_, i) => this.el.querySelector(`#hot-cue-${side}-${i}`) as HTMLButtonElement);
+    this.cueBankButtons = Array.from({ length: CUE_BANK_COUNT }, (_, i) => this.el.querySelector(`#cue-bank-${side}-${i}`) as HTMLButtonElement);
     this.cueClearBtn = this.el.querySelector(`#cue-clear-${side}`) as HTMLButtonElement;
   }
 
@@ -319,12 +334,34 @@ export class DeckUI {
     });
 
     this.el.querySelectorAll<HTMLButtonElement>('.btn-sfx-shot[data-sfx]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      let flashTimer: number | null = null;
+      const triggerShot = (): void => {
         const sfx = btn.dataset.sfx;
         if (!sfx) return;
         window.dispatchEvent(new CustomEvent('sfx-trigger', { detail: { deckId: side, sfx } }));
+        if (flashTimer !== null) {
+          clearTimeout(flashTimer);
+        }
+        btn.classList.remove('active');
+        // Reflow resets the flash animation and keeps rapid retriggers responsive.
+        void btn.offsetWidth;
         btn.classList.add('active');
-        window.setTimeout(() => btn.classList.remove('active'), 180);
+        flashTimer = window.setTimeout(() => {
+          btn.classList.remove('active');
+          flashTimer = null;
+        }, 95);
+      };
+
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        triggerShot();
+      });
+
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          triggerShot();
+        }
       });
     });
 
@@ -445,6 +482,8 @@ export class DeckUI {
   private syncCueState(): void {
     this.cueButtons.forEach((btn, i) => {
       const cueId = this.getCueId(i);
+      const defaultColor = CUE_COLOR_PALETTE[cueId % CUE_COLOR_PALETTE.length];
+      btn.style.setProperty('--cue-color', defaultColor);
       btn.textContent = `${cueId + 1}`;
       const cue = this.deck.cuePoints.find((c) => c.id === cueId);
       if (cue) {
@@ -454,7 +493,6 @@ export class DeckUI {
         btn.title = 'Tap: jump, long press: clear';
       } else {
         btn.classList.remove('active');
-        btn.style.removeProperty('--cue-color');
         btn.setAttribute('aria-pressed', 'false');
         btn.title = 'Tap: set cue';
       }
@@ -570,7 +608,7 @@ export class DeckUI {
   }
 
   private getCueId(visibleSlot: number): number {
-    return this.cueBank * 4 + visibleSlot;
+    return this.cueBank * CUES_PER_BANK + visibleSlot;
   }
 
   private updateCueBankUI(): void {
