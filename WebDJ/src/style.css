@@ -481,6 +481,8 @@ body {
   border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: linear-gradient(180deg, #090d14, #06090f);
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
   touch-action: none;
 }
 
@@ -649,6 +651,12 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+
+.loop-memory-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .cue-bank-row {
@@ -885,6 +893,36 @@ body {
   border-color: rgba(141, 238, 194, 0.85);
   background: linear-gradient(180deg, rgba(90, 214, 156, 0.36), rgba(35, 102, 81, 0.34));
   color: #ebfff8;
+}
+
+.btn-loop.save-armed {
+  border-color: rgba(255, 222, 153, 0.98);
+  background: linear-gradient(180deg, rgba(255, 191, 90, 0.78), rgba(163, 92, 24, 0.62));
+  color: #fffdf8;
+  box-shadow:
+    0 0 0 1px rgba(255, 238, 197, 0.52),
+    0 0 18px rgba(255, 173, 74, 0.6),
+    inset 0 1px 0 rgba(255, 245, 218, 0.38);
+}
+
+.loop-slot-btn {
+  min-height: 28px;
+  border-color: rgba(177, 197, 231, 0.3);
+  background: linear-gradient(180deg, rgba(219, 232, 255, 0.12), rgba(89, 106, 137, 0.2));
+}
+
+.loop-slot-btn.has-loop {
+  border-color: rgba(255, 215, 120, 0.92);
+  background: linear-gradient(180deg, rgba(255, 189, 84, 0.74), rgba(150, 86, 23, 0.58));
+  color: #fffdf6;
+  box-shadow: 0 0 0 1px rgba(255, 231, 174, 0.42), 0 0 14px rgba(255, 170, 62, 0.46);
+}
+
+.loop-slot-btn.current-loop {
+  border-color: rgba(124, 255, 205, 0.98);
+  background: linear-gradient(180deg, rgba(81, 255, 180, 0.78), rgba(23, 135, 97, 0.66));
+  color: #f0fff8;
+  box-shadow: 0 0 0 1px rgba(189, 255, 225, 0.5), 0 0 16px rgba(64, 255, 182, 0.56);
 }
 
 .btn-mini {

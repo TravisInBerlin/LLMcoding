@@ -23,6 +23,9 @@ type CueDeckId = 'A' | 'B';
 type SinkCapableMediaElement = HTMLMediaElement & {
   setSinkId: (sinkId: string) => Promise<void>;
 };
+type SelectOutputCapableMediaDevices = MediaDevices & {
+  selectAudioOutput: () => Promise<MediaDeviceInfo>;
+};
 
 const engine = new AudioEngine();
 const deckIds: DeckId[] = ['A', 'B', 'C', 'D'];
@@ -74,6 +77,7 @@ root.innerHTML = `
         <select id="cue-output-select" class="midi-learn-select cue-output-select" title="CUEの出力先オーディオデバイスを選びます">
           <option value="default">CUE: Default Device</option>
         </select>
+        <button class="btn btn-mini btn-muted" id="cue-refresh-btn" title="出力デバイスを再取得します">OUTPUT SCAN</button>
         <button class="btn btn-mini btn-muted" id="cue-a-btn" title="Deck AをヘッドホンCUEへ送ります">CUE A OFF</button>
         <button class="btn btn-mini btn-muted" id="cue-b-btn" title="Deck BをヘッドホンCUEへ送ります">CUE B OFF</button>
         <select id="cue-level-select" class="midi-learn-select cue-level-select" title="ヘッドホンCUE音量">
@@ -179,6 +183,7 @@ const settingsPopover = document.getElementById('settings-popover') as HTMLDivEl
 const midiBtn = document.getElementById('midi-btn') as HTMLButtonElement;
 const cueInitBtn = document.getElementById('cue-init-btn') as HTMLButtonElement;
 const cueOutputSelect = document.getElementById('cue-output-select') as HTMLSelectElement;
+const cueRefreshBtn = document.getElementById('cue-refresh-btn') as HTMLButtonElement;
 const cueABtn = document.getElementById('cue-a-btn') as HTMLButtonElement;
 const cueBBtn = document.getElementById('cue-b-btn') as HTMLButtonElement;
 const cueLevelSelect = document.getElementById('cue-level-select') as HTMLSelectElement;
@@ -206,6 +211,8 @@ root.appendChild(cueMonitorEl);
 
 const hasSetSinkId = (el: HTMLMediaElement): el is SinkCapableMediaElement =>
   typeof (el as Partial<SinkCapableMediaElement>).setSinkId === 'function';
+const hasSelectAudioOutput = (devices: MediaDevices): devices is SelectOutputCapableMediaDevices =>
+  typeof (devices as Partial<SelectOutputCapableMediaDevices>).selectAudioOutput === 'function';
 const isSetSinkIdSupported = hasSetSinkId(cueMonitorEl);
 const cueEnabledDecks: Record<CueDeckId, boolean> = { A: false, B: false };
 let cueMonitorReady = false;
@@ -258,6 +265,32 @@ const populateCueOutputs = async (): Promise<void> => {
     cueOutputSelect.innerHTML = '<option value="default">CUE: Default Device</option>';
     cueOutputSelect.disabled = !isSetSinkIdSupported;
   }
+};
+
+const unlockOutputDeviceLabels = async (): Promise<void> => {
+  if (!navigator.mediaDevices?.getUserMedia) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+  } catch {
+    // Permission denied is okay; we still try enumerateDevices afterwards.
+  }
+};
+
+const scanCueOutputs = async (): Promise<void> => {
+  await unlockOutputDeviceLabels();
+  await populateCueOutputs();
+
+  const count = cueOutputSelect.options.length;
+  if (count <= 1) {
+    if (!isSetSinkIdSupported) {
+      statusBadge.textContent = 'CUE output split is unsupported in this browser (setSinkId unavailable)';
+    } else {
+      statusBadge.textContent = 'Only default output found. Connect audio interface/headphones and scan again.';
+    }
+    return;
+  }
+  statusBadge.textContent = `CUE outputs detected: ${count}`;
 };
 
 const initCueMonitor = async (): Promise<boolean> => {
@@ -744,6 +777,23 @@ cueLevelSelect.addEventListener('change', () => {
   const level = Number(cueLevelSelect.value || '0.7');
   engine.setCueLevel(level);
   statusBadge.textContent = `CUE level: ${Math.round(level * 100)}%`;
+});
+
+cueRefreshBtn.addEventListener('click', async () => {
+  if (hasSelectAudioOutput(navigator.mediaDevices)) {
+    try {
+      const selected = await navigator.mediaDevices.selectAudioOutput();
+      await scanCueOutputs();
+      if (selected?.deviceId) {
+        cueOutputSelect.value = selected.deviceId;
+        await setCueSink(selected.deviceId);
+      }
+      return;
+    } catch {
+      // User canceled picker or browser blocked it. Fallback to regular scan.
+    }
+  }
+  await scanCueOutputs();
 });
 
 midiLearnBtn.addEventListener('click', async () => {

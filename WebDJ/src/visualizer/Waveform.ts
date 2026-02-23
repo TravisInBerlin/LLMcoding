@@ -37,10 +37,12 @@ export class Waveform {
 
   private resize(): void {
     const rect = this.canvas.getBoundingClientRect();
-    this.canvas.width = rect.width * window.devicePixelRatio;
-    this.canvas.height = rect.height * window.devicePixelRatio;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    this.canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    this.canvas.height = Math.max(1, Math.round(rect.height * dpr));
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    this.ctx.scale(dpr, dpr);
+    this.ctx.imageSmoothingEnabled = false;
   }
 
   private startRender(): void {
@@ -130,47 +132,55 @@ export class Waveform {
   private drawHorizontal(w: number, h: number): void {
     const { ctx, deck } = this;
     const peaks = deck.peaks!;
-    const numBars = peaks.length;
-    const barWidth = w / numBars;
     const progress = deck.duration > 0 ? deck.currentTime / deck.duration : 0;
-    const progressIndex = Math.floor(progress * numBars);
 
     this.drawLoopAreaHorizontal(w, h);
     this.drawBeatGridHorizontal(w, h);
 
     const mid = h / 2;
-    const baseColor = 'rgba(68, 102, 152, 0.32)';
+    const baseColor = 'rgba(78, 112, 168, 0.55)';
     const playedColor = this.accentColor;
-    const centerColor = 'rgba(209, 229, 255, 0.66)';
-    const drawWidth = Math.max(1, Math.ceil(barWidth * 0.78));
+    const centerColor = 'rgba(236, 246, 255, 0.82)';
+    const numCols = Math.max(1, Math.floor(w));
+    const samplesPerCol = peaks.length / numCols;
+    const progressX = progress * w;
 
-    for (let i = 0; i < numBars; i++) {
-      const val = peaks[i];
-      const barH = val * mid * 0.9;
-      const x = Math.floor(i * barWidth);
-      const isPlayed = i <= progressIndex;
+    for (let x = 0; x < numCols; x++) {
+      const from = Math.floor(x * samplesPerCol);
+      const to = Math.max(from + 1, Math.floor((x + 1) * samplesPerCol));
+      let maxPeak = 0;
+      for (let i = from; i < to && i < peaks.length; i++) {
+        const v = peaks[i];
+        if (v > maxPeak) maxPeak = v;
+      }
+      const barH = Math.max(1, maxPeak * mid * 0.92);
+      const isPlayed = x <= progressX;
 
       ctx.fillStyle = isPlayed ? playedColor : baseColor;
-      ctx.globalAlpha = isPlayed ? 0.95 : 1;
-      ctx.fillRect(x, mid - barH, drawWidth, barH * 2);
+      ctx.globalAlpha = isPlayed ? 0.94 : 0.96;
+      ctx.fillRect(x, Math.round(mid - barH), 1, Math.round(barH * 2));
 
-      ctx.fillStyle = isPlayed ? '#faffff' : centerColor;
-      ctx.globalAlpha = isPlayed ? 0.86 : 0.52;
-      ctx.fillRect(x, mid - barH * 0.18, drawWidth, barH * 0.36);
+      ctx.fillStyle = isPlayed ? '#ffffff' : centerColor;
+      ctx.globalAlpha = isPlayed ? 0.74 : 0.58;
+      ctx.fillRect(x, Math.round(mid - barH * 0.14), 1, Math.max(1, Math.round(barH * 0.28)));
     }
 
     ctx.globalAlpha = 1.0;
 
     const playheadX = Math.floor(progress * w) + 0.5;
-    ctx.strokeStyle = '#ff3ca2';
-    ctx.lineWidth = 1.5;
-    ctx.shadowColor = 'rgba(255, 58, 166, 0.58)';
-    ctx.shadowBlur = 8;
+    ctx.strokeStyle = '#ff2f9b';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.moveTo(playheadX, 0);
     ctx.lineTo(playheadX, h);
     ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(playheadX + 1, 0);
+    ctx.lineTo(playheadX + 1, h);
+    ctx.stroke();
 
     for (const cue of deck.cuePoints) {
       const cueX = (cue.position / deck.duration) * w;
@@ -182,47 +192,56 @@ export class Waveform {
   private drawVertical(w: number, h: number): void {
     const { ctx, deck } = this;
     const peaks = deck.peaks!;
-    const numBars = peaks.length;
-    const barHeight = h / numBars;
     const progress = deck.duration > 0 ? deck.currentTime / deck.duration : 0;
-    const progressIndex = Math.floor(progress * numBars);
 
     this.drawLoopAreaVertical(w, h);
     this.drawBeatGridVertical(w, h);
 
     const mid = w / 2;
-    const baseColor = 'rgba(68, 102, 152, 0.32)';
+    const baseColor = 'rgba(78, 112, 168, 0.55)';
     const playedColor = this.accentColor;
-    const centerColor = 'rgba(209, 229, 255, 0.66)';
-    const drawHeight = Math.max(1, Math.ceil(barHeight * 0.74));
+    const centerColor = 'rgba(236, 246, 255, 0.82)';
+    const numRows = Math.max(1, Math.floor(h));
+    const samplesPerRow = peaks.length / numRows;
+    const progressY = h - progress * h;
 
-    for (let i = 0; i < numBars; i++) {
-      const val = peaks[numBars - i - 1];
-      const halfW = Math.max(1, val * mid * 0.85);
-      const y = Math.floor(i * barHeight);
-      const isPlayed = numBars - i - 1 <= progressIndex;
+    for (let y = 0; y < numRows; y++) {
+      const from = Math.floor(y * samplesPerRow);
+      const to = Math.max(from + 1, Math.floor((y + 1) * samplesPerRow));
+      let maxPeak = 0;
+      for (let i = from; i < to && i < peaks.length; i++) {
+        const idx = peaks.length - i - 1;
+        const v = peaks[idx];
+        if (v > maxPeak) maxPeak = v;
+      }
+      const halfW = Math.max(1, maxPeak * mid * 0.9);
+      const isPlayed = y >= progressY;
 
       ctx.fillStyle = isPlayed ? playedColor : baseColor;
-      ctx.globalAlpha = isPlayed ? 0.95 : 1;
-      ctx.fillRect(mid - halfW, y, halfW * 2, drawHeight);
+      ctx.globalAlpha = isPlayed ? 0.94 : 0.96;
+      ctx.fillRect(Math.round(mid - halfW), y, Math.round(halfW * 2), 1);
 
-      ctx.fillStyle = isPlayed ? '#faffff' : centerColor;
-      ctx.globalAlpha = isPlayed ? 0.86 : 0.52;
-      ctx.fillRect(mid - halfW * 0.2, y, halfW * 0.4, drawHeight);
+      ctx.fillStyle = isPlayed ? '#ffffff' : centerColor;
+      ctx.globalAlpha = isPlayed ? 0.74 : 0.58;
+      ctx.fillRect(Math.round(mid - halfW * 0.14), y, Math.max(1, Math.round(halfW * 0.28)), 1);
     }
 
     ctx.globalAlpha = 1.0;
 
     const playheadY = Math.floor(h - progress * h) + 0.5;
-    ctx.strokeStyle = '#ff3ca2';
-    ctx.lineWidth = 1.5;
-    ctx.shadowColor = 'rgba(255, 58, 166, 0.58)';
-    ctx.shadowBlur = 8;
+    ctx.strokeStyle = '#ff2f9b';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.moveTo(0, playheadY);
     ctx.lineTo(w, playheadY);
     ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, playheadY + 1);
+    ctx.lineTo(w, playheadY + 1);
+    ctx.stroke();
 
     for (const cue of deck.cuePoints) {
       const cueY = h - (cue.position / deck.duration) * h;
