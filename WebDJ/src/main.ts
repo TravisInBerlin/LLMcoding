@@ -169,7 +169,7 @@ const libraryUI = new LibraryUI(document.getElementById('library-container')!, d
 let deckMode: 2 | 4 = 2;
 let waveformMode: WaveformMode = 'horizontal';
 let mixerVisible = true;
-let libraryVisible = true;
+let libraryVisible = false;
 
 const deckModeBtn = document.getElementById('deck-mode-btn') as HTMLButtonElement;
 const waveformModeBtn = document.getElementById('waveform-mode-btn') as HTMLButtonElement;
@@ -416,7 +416,10 @@ const applyMixerVisibility = (): void => {
 
 const applyLibraryVisibility = (): void => {
   root.classList.toggle('library-hidden', !libraryVisible);
-  libraryToggleBtn.textContent = libraryVisible ? 'LIB: ON' : 'LIB: OFF';
+  root.classList.toggle('library-open', libraryVisible);
+  libraryToggleBtn.textContent = libraryVisible ? 'LIB: OPEN' : 'LIB';
+  libraryToggleBtn.classList.toggle('active', libraryVisible);
+  libraryToggleBtn.setAttribute('aria-expanded', String(libraryVisible));
 };
 
 const setSettingsOpen = (open: boolean): void => {
@@ -898,6 +901,10 @@ guideToggleBtn.addEventListener('click', () => {
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     setSettingsOpen(false);
+    if (libraryVisible) {
+      libraryVisible = false;
+      applyLibraryVisibility();
+    }
     midi.cancelLearn();
     statusBadge.textContent = 'MIDI Learn canceled';
     midiLearnBtn.classList.remove('active');

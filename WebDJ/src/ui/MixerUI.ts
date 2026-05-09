@@ -8,6 +8,8 @@ interface DeckMacroState {
   drumFocusStems: Record<StemName, number> | null;
 }
 
+type MixerFocusView = 'eq' | 'stem' | 'fx';
+
 export class MixerUI {
   private decks: Deck[];
   private crossfader: Crossfader;
@@ -32,6 +34,7 @@ export class MixerUI {
   private mutedSavedVolume = new Map<DeckId, number>();
   private soloDeck: DeckId | null = null;
   private soloSavedVolumes = new Map<DeckId, number>();
+  private mixerFocusView: MixerFocusView = 'eq';
 
   constructor(container: HTMLElement, decks: Deck[], crossfader: Crossfader) {
     this.decks = decks;
@@ -79,6 +82,12 @@ export class MixerUI {
           <span class="mixer-legend-item"><strong>FX FLT</strong> FX Filter</span>
         </div>
 
+        <div class="mixer-focus-tabs" aria-label="Mixer view">
+          <button class="mixer-focus-tab active" data-mixer-focus="eq" type="button">EQ</button>
+          <button class="mixer-focus-tab" data-mixer-focus="stem" type="button">STEM</button>
+          <button class="mixer-focus-tab" data-mixer-focus="fx" type="button">FX</button>
+        </div>
+
         <div class="mixer-channels">
           ${this.decks
         .map(
@@ -89,7 +98,7 @@ export class MixerUI {
                   <span class="channel-bpm" id="chan-bpm-${deck.id}">-- BPM</span>
                 </div>
 
-                <div class="compact-row compact-row-4">
+                <div class="compact-row compact-row-4" data-mixer-panel="eq">
                   <div class="compact-item" title="HI: High EQ">
                     <span class="compact-item-label"><strong>HI</strong><small>HIGH EQ</small></span>
                     <button class="mixer-knob" id="eq-hi-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
@@ -108,7 +117,7 @@ export class MixerUI {
                   </div>
                 </div>
 
-                <div class="compact-row compact-row-3">
+                <div class="compact-row compact-row-3" data-mixer-panel="stem">
                   <div class="compact-item" title="DRM: Drums stem level">
                     <span class="compact-item-label"><strong>DRM</strong><small>DRUMS</small></span>
                     <button class="mixer-knob" id="stem-drums-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
@@ -123,7 +132,7 @@ export class MixerUI {
                   </div>
                 </div>
 
-                <div class="compact-row compact-row-3">
+                <div class="compact-row compact-row-3" data-mixer-panel="fx">
                   <div class="compact-item" title="ECHO: Echo amount">
                     <span class="compact-item-label"><strong>ECHO</strong><small>ECHO</small></span>
                     <button class="mixer-knob" id="fx-echo-${deck.id}" type="button"><span class="mixer-knob-indicator"></span></button>
@@ -139,7 +148,7 @@ export class MixerUI {
                 </div>
 
                 <div class="channel-foot">
-                  <div class="neural-fx-row">
+                  <div class="neural-fx-row" data-mixer-panel="stem">
                     <button class="btn btn-neural-fx" id="nfx-vocal-echo-${deck.id}">VOCAL ECHO</button>
                     <button class="btn btn-neural-fx" id="nfx-drum-filter-${deck.id}">DRUM FILTER</button>
                   </div>
@@ -150,7 +159,7 @@ export class MixerUI {
                   </div>
 
                   <div class="channel-lower-grid">
-                    <div class="macro-bank">
+                    <div class="macro-bank" data-mixer-panel="stem">
                       <span class="macro-title">MIX MACRO</span>
                       <div class="macro-grid">
                         <button class="btn btn-mini btn-macro" id="macro-bass-cut-${deck.id}" title="LOW EQを下げてベース帯域を整理">BASS CUT</button>
@@ -193,7 +202,7 @@ export class MixerUI {
         .join('')}
         </div>
 
-        <div class="xy-pad-section">
+        <div class="xy-pad-section" data-mixer-panel="fx">
           ${(['A', 'B'] as DeckId[])
             .map(
               (id) => `
@@ -279,6 +288,7 @@ export class MixerUI {
   }
 
   private bind(): void {
+    this.bindFocusTabs();
     const cf = this.el.querySelector('#crossfader') as HTMLElement;
     this.bindLinearFader(cf, {
       min: 0,
@@ -305,6 +315,28 @@ export class MixerUI {
       this.bindMixMacros(deck);
     });
     this.bindXYPads();
+  }
+
+  private bindFocusTabs(): void {
+    this.el.querySelectorAll<HTMLButtonElement>('[data-mixer-focus]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.mixerFocus as MixerFocusView;
+        this.setMixerFocusView(view);
+      });
+    });
+    this.setMixerFocusView(this.mixerFocusView);
+  }
+
+  private setMixerFocusView(view: MixerFocusView): void {
+    this.mixerFocusView = view;
+    const panel = this.el.querySelector('.center-panel') as HTMLElement | null;
+    if (!panel) return;
+    panel.dataset.mixerFocus = view;
+    this.el.querySelectorAll<HTMLButtonElement>('[data-mixer-focus]').forEach((btn) => {
+      const active = btn.dataset.mixerFocus === view;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
   }
 
   private bindCenterMeta(): void {
