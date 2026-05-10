@@ -47,9 +47,18 @@ npm run preview
 - `WAVE: H / WAVE: V`: 波形表示の向き切り替え
 - `LIB`: ライブラリ表示トグル
 - `AUTO DROP`: 選択ルート（`A->B / B->A / C->D / D->C`）で1回遷移
+- `AUTO BPM` / `AUTO KEY`: AUTO DROP時にテンポ同期・キー同期を個別に切り替え（デフォルトOFF）
 - `AUTOMIX`: 12秒間隔で Auto Drop を自動実行（ON/OFF）
 - `XFADE: SMOOTH / POWER / NEURAL`: トランジション特性切り替え
 - `REC START`: マスター出力録音（ブラウザにより `webm` / `m4a` など）
+
+### 使い方メモ（AUTO DROP / AUTOMIX）
+
+1. `FEATURES` を開く  
+2. `AUTO BPM` / `AUTO KEY` を必要に応じて切り替える（初期値は両方 OFF）  
+3. 手動で遷移したい場合は、ルート選択後に `AUTO DROP`  
+4. 定期自動遷移したい場合は `AUTOMIX ON`  
+5. 原曲テンポ/キーを維持したい場合は `AUTO BPM OFF` + `AUTO KEY OFF` のまま使う
 
 ### Deck 機能
 
@@ -158,12 +167,21 @@ npm run preview
 - 2/4 deck layout toggle
 - Horizontal / vertical waveform mode
 - Auto Drop routes (`A->B / B->A / C->D / D->C`)
+- `AUTO BPM` / `AUTO KEY` toggles for Auto Drop sync behavior (both OFF by default)
 - Automix loop (runs Auto Drop every 12s)
 - Transition styles (`SMOOTH / POWER / NEURAL`)
 - Headphone CUE routing (browser support dependent)
 - MIDI Learn with persistent mapping in `localStorage`
 - Deck tools: Hot Cue (16 slots), Loop Memory (4 slots), DJ SHOTS, Key Lock, Sync, Key Match
 - Master recording export (`webm`, `m4a`, etc. depending on browser)
+
+### Usage notes (AUTO DROP / AUTOMIX)
+
+1. Open `FEATURES`  
+2. Toggle `AUTO BPM` and `AUTO KEY` as needed (both are OFF by default)  
+3. For one-shot transition, choose route then press `AUTO DROP`  
+4. For periodic auto transitions, enable `AUTOMIX ON`  
+5. To keep original tempo/key, leave both toggles OFF
 
 ### Screenshots / GIF
 

@@ -24,6 +24,8 @@ type AutoDropOptions = {
   transitionStyle: TransitionStyle;
   deckMap: Map<DeckId, Deck>;
   crossfader: Crossfader;
+  autoSyncBpm: boolean;
+  autoMatchKey: boolean;
   parseKeyRoot: (key: string) => number | null;
   onStatus: (message: string) => void;
 };
@@ -33,6 +35,8 @@ export const runAutoDropTransition = async ({
   transitionStyle,
   deckMap,
   crossfader,
+  autoSyncBpm,
+  autoMatchKey,
   parseKeyRoot,
   onStatus,
 }: AutoDropOptions): Promise<void> => {
@@ -62,15 +66,19 @@ export const runAutoDropTransition = async ({
       target.crossfadeGain.gain.value = 0;
       if (!source.playing) source.crossfadeGain.gain.value = 1;
     }
-    if (source.bpm > 0) target.syncTo(source.bpm);
+    if (autoSyncBpm && source.bpm > 0) {
+      target.syncTo(source.bpm);
+    }
 
-    const srcRoot = parseKeyRoot(source.musicalKey);
-    const tgtRoot = parseKeyRoot(target.musicalKey);
-    if (srcRoot !== null && tgtRoot !== null) {
-      let diff = srcRoot - tgtRoot;
-      if (diff > 6) diff -= 12;
-      if (diff < -6) diff += 12;
-      target.matchKey(diff);
+    if (autoMatchKey) {
+      const srcRoot = parseKeyRoot(source.musicalKey);
+      const tgtRoot = parseKeyRoot(target.musicalKey);
+      if (srcRoot !== null && tgtRoot !== null) {
+        let diff = srcRoot - tgtRoot;
+        if (diff > 6) diff -= 12;
+        if (diff < -6) diff += 12;
+        target.matchKey(diff);
+      }
     }
     await target.play();
   }

@@ -117,6 +117,8 @@ root.innerHTML = `
           <option value="power">XFADE: POWER</option>
           <option value="neural">XFADE: NEURAL</option>
         </select>
+        <button class="btn btn-mini btn-muted" id="auto-sync-bpm-btn" title="AUTO DROP時にBPM同期するか切り替えます">AUTO BPM OFF</button>
+        <button class="btn btn-mini btn-muted" id="auto-match-key-btn" title="AUTO DROP時にキー同期するか切り替えます">AUTO KEY OFF</button>
         <button class="btn btn-mini btn-muted" id="guide-toggle-btn" title="操作ガイドの表示/非表示を切り替えます">GUIDE</button>
         <button class="btn btn-mini btn-key" id="automix-btn" title="定期自動ミックスのON/OFFを切り替えます">AUTOMIX OFF</button>
       </div>
@@ -191,6 +193,8 @@ const midiLearnBtn = document.getElementById('midi-learn-btn') as HTMLButtonElem
 const midiLearnCancelBtn = document.getElementById('midi-learn-cancel-btn') as HTMLButtonElement;
 const midiLearnTarget = document.getElementById('midi-learn-target') as HTMLSelectElement;
 const mixerToggleBtn = document.getElementById('mixer-toggle-btn') as HTMLButtonElement;
+const autoSyncBpmBtn = document.getElementById('auto-sync-bpm-btn') as HTMLButtonElement;
+const autoMatchKeyBtn = document.getElementById('auto-match-key-btn') as HTMLButtonElement;
 const libraryToggleBtn = document.getElementById('library-toggle-btn') as HTMLButtonElement;
 const quickImportBtn = document.getElementById('quick-import-btn') as HTMLButtonElement;
 const globalFilePicker = document.getElementById('global-file-picker') as HTMLInputElement;
@@ -199,6 +203,19 @@ const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
 const guidePanel = document.getElementById('guide-panel') as HTMLElement;
 midiLearnCancelBtn.disabled = true;
 midiLearnCancelBtn.classList.add('hidden-control');
+
+let autoSyncBpmEnabled = false;
+let autoMatchKeyEnabled = false;
+
+const updateAutoTransitionButtons = (): void => {
+  autoSyncBpmBtn.textContent = autoSyncBpmEnabled ? 'AUTO BPM ON' : 'AUTO BPM OFF';
+  autoSyncBpmBtn.classList.toggle('active', autoSyncBpmEnabled);
+  autoSyncBpmBtn.setAttribute('aria-pressed', String(autoSyncBpmEnabled));
+
+  autoMatchKeyBtn.textContent = autoMatchKeyEnabled ? 'AUTO KEY ON' : 'AUTO KEY OFF';
+  autoMatchKeyBtn.classList.toggle('active', autoMatchKeyEnabled);
+  autoMatchKeyBtn.setAttribute('aria-pressed', String(autoMatchKeyEnabled));
+};
 
 const cueMonitorEl = document.createElement('audio');
 cueMonitorEl.autoplay = true;
@@ -444,6 +461,7 @@ applyDeckMode();
 applyWaveformMode();
 applyMixerVisibility();
 applyLibraryVisibility();
+updateAutoTransitionButtons();
 setSettingsOpen(false);
 
 (['A', 'B'] as DeckId[]).forEach((id) => {
@@ -684,6 +702,8 @@ const triggerAutoDrop = async (route: AutoDropRoute): Promise<void> => {
     transitionStyle,
     deckMap,
     crossfader,
+    autoSyncBpm: autoSyncBpmEnabled,
+    autoMatchKey: autoMatchKeyEnabled,
     parseKeyRoot,
     onStatus: (message) => {
       statusBadge.textContent = message;
@@ -853,6 +873,18 @@ midiLearnCancelBtn.addEventListener('click', () => {
 mixerToggleBtn.addEventListener('click', () => {
   mixerVisible = !mixerVisible;
   applyMixerVisibility();
+});
+
+autoSyncBpmBtn.addEventListener('click', () => {
+  autoSyncBpmEnabled = !autoSyncBpmEnabled;
+  updateAutoTransitionButtons();
+  statusBadge.textContent = `Auto BPM Sync: ${autoSyncBpmEnabled ? 'ON' : 'OFF'}`;
+});
+
+autoMatchKeyBtn.addEventListener('click', () => {
+  autoMatchKeyEnabled = !autoMatchKeyEnabled;
+  updateAutoTransitionButtons();
+  statusBadge.textContent = `Auto Key Match: ${autoMatchKeyEnabled ? 'ON' : 'OFF'}`;
 });
 
 libraryToggleBtn.addEventListener('click', () => {
