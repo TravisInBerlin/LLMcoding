@@ -1,0 +1,398 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: WebDJ NEXUS
+      - generic [ref=e6]: "Auto Key Match: ON"
+    - generic [ref=e7]:
+      - button "4 DECK" [ref=e8]
+      - 'button "WAVE: H" [ref=e9]'
+      - button "LIB" [ref=e10]
+      - combobox "AUTO DROPの遷移方向を選択します" [ref=e11]:
+        - 'option "AUTO: A -> B" [selected]'
+        - 'option "AUTO: B -> A"'
+        - 'option "AUTO: C -> D"'
+        - 'option "AUTO: D -> C"'
+      - button "AUTO DROP" [ref=e12]
+    - generic [ref=e13]:
+      - button "FEATURES" [expanded] [ref=e14]
+      - button "REC START" [ref=e15]
+    - generic [ref=e326]:
+      - button "MIDI CONNECT" [ref=e327]
+      - button "CUE OUT" [ref=e328]
+      - combobox "CUEの出力先オーディオデバイスを選びます" [ref=e329]:
+        - 'option "CUE: Output 1" [selected]'
+      - button "OUTPUT SCAN" [ref=e330]
+      - button "CUE A OFF" [ref=e331]
+      - button "CUE B OFF" [ref=e332]
+      - combobox "ヘッドホンCUE音量" [ref=e333]:
+        - option "CUE LV 55%"
+        - option "CUE LV 70%" [selected]
+        - option "CUE LV 85%"
+        - option "CUE LV 100%"
+      - combobox "MIDI LEARNで割り当てる操作を選択します" [ref=e334]:
+        - 'option "Learn: Play A" [selected]'
+        - 'option "Learn: Play B"'
+        - 'option "Learn: Cue A"'
+        - 'option "Learn: Cue B"'
+        - 'option "Learn: Sync A"'
+        - 'option "Learn: Sync B"'
+        - 'option "Learn: Key A"'
+        - 'option "Learn: Key B"'
+        - 'option "Learn: Crossfader"'
+        - 'option "Learn: Volume A"'
+        - 'option "Learn: Volume B"'
+        - 'option "Learn: Tempo A"'
+        - 'option "Learn: Tempo B"'
+        - 'option "Learn: Filter A"'
+        - 'option "Learn: Filter B"'
+        - 'option "Learn: Vocal A"'
+        - 'option "Learn: Vocal B"'
+        - 'option "Learn: Drums A"'
+        - 'option "Learn: Drums B"'
+        - 'option "Learn: Inst A"'
+        - 'option "Learn: Inst B"'
+      - button "MIDI LEARN" [ref=e335]
+      - button "MIXER HIDE" [ref=e336]
+      - combobox "クロスフェード時のミックス特性を選びます" [ref=e337]:
+        - 'option "XFADE: SMOOTH" [selected]'
+        - 'option "XFADE: POWER"'
+        - 'option "XFADE: NEURAL"'
+      - button "AUTO BPM ON" [pressed] [ref=e342]
+      - button "AUTO KEY ON" [active] [pressed] [ref=e343]
+      - button "GUIDE" [ref=e340]
+      - button "AUTOMIX OFF" [ref=e341]
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]: A
+          - generic [ref=e22]:
+            - generic [ref=e23]:
+              - generic [ref=e24]: DECK A
+              - generic [ref=e25]: No Track Loaded
+            - generic [ref=e26]:
+              - generic [ref=e27]: 0:00 / 0:00
+              - generic [ref=e28]: "-- BPM"
+              - generic [ref=e29]: "Key: --"
+              - generic [ref=e30]: "Neural: --"
+          - button "KEY LOCK" [ref=e31]
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e41]: A
+            - generic [ref=e42]: DISC
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - generic [ref=e45]: TRANSPORT
+              - generic [ref=e46]:
+                - button "CUE" [ref=e47]
+                - button "▶" [ref=e48]
+                - button "SYNC" [ref=e49]
+                - button "KEY MATCH" [ref=e50]
+              - generic [ref=e51]: "CUE: 頭出し / PLAY: 再生停止 / SYNC: BPM合わせ / KEY MATCH: キー合わせ"
+            - generic [ref=e52]:
+              - generic [ref=e53]: LOOP
+              - generic [ref=e54]:
+                - button "IN" [ref=e55]
+                - button "OUT" [ref=e56]
+                - button "LOOP" [ref=e57]
+                - button "SAVE" [ref=e58]
+                - button "1B" [ref=e59]
+                - button "2B" [ref=e60]
+                - button "4B" [ref=e61]
+                - button "8B" [ref=e62]
+                - button "16B" [ref=e63]
+              - generic [ref=e64]:
+                - button "1" [ref=e65]
+                - button "2" [ref=e66]
+                - button "3" [ref=e67]
+                - button "4" [ref=e68]
+              - generic [ref=e69]: "IN/OUT/LOOP: 再クリックでOFF / SAVE: ON後にMEM保存 / MEM: タップ読込・長押し削除"
+            - generic [ref=e70]:
+              - generic [ref=e71]: HOT CUE
+              - generic [ref=e72]:
+                - button "1-8" [ref=e73]
+                - button "9-16" [ref=e74]
+                - button "CLR" [ref=e75]
+              - generic [ref=e76]:
+                - button "1" [ref=e77]
+                - button "2" [ref=e78]
+                - button "3" [ref=e79]
+                - button "4" [ref=e80]
+                - button "5" [ref=e81]
+                - button "6" [ref=e82]
+                - button "7" [ref=e83]
+                - button "8" [ref=e84]
+              - generic [ref=e85]: "Hot Cue: 8PAD表示 / タップ=セット/ジャンプ / 長押し=解除 / CLR=次のタップで削除"
+            - generic [ref=e86]:
+              - generic [ref=e87]: DJ SHOTS
+              - generic [ref=e88]:
+                - button "HORN" [ref=e89]
+                - button "LASER" [ref=e90]
+                - button "CLAP" [ref=e91]
+                - button "IMPACT" [ref=e92]
+                - button "SIREN" [ref=e93]
+                - button "WHISTLE" [ref=e94]
+                - button "BELL" [ref=e95]
+                - button "RISER" [ref=e96]
+              - generic [ref=e97]: "DJ FX: 連打対応ワンタップ効果音（Party向けSIREN/WHISTLE/RISER追加）"
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - generic [ref=e100]: TEMPO (速度)
+              - button "Tempo knob" [ref=e101]
+              - generic [ref=e102]: +0.0%
+            - generic [ref=e103]:
+              - generic [ref=e104]: KEY SHIFT (半音)
+              - button "Key shift knob" [ref=e105]
+              - generic [ref=e106]: KEY +0 st
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - generic [ref=e112]: A
+              - generic [ref=e113]: No Track Loaded
+              - generic [ref=e114]: 0:00
+            - generic [ref=e115]: "-- BPM / Key Unknown"
+          - generic [ref=e116]: MIX STATUS
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - generic [ref=e119]: B
+              - generic [ref=e120]: No Track Loaded
+              - generic [ref=e121]: 0:00
+            - generic [ref=e122]: "-- BPM / Key Unknown"
+        - generic "Mixer label guide" [ref=e123]:
+          - generic [ref=e124]:
+            - strong [ref=e125]: HI
+            - text: High EQ
+          - generic [ref=e126]:
+            - strong [ref=e127]: MID
+            - text: Mid EQ
+          - generic [ref=e128]:
+            - strong [ref=e129]: LOW
+            - text: Low EQ
+          - generic [ref=e130]:
+            - strong [ref=e131]: FLT
+            - text: Tone Filter
+          - generic [ref=e132]:
+            - strong [ref=e133]: DRM
+            - text: Drums
+          - generic [ref=e134]:
+            - strong [ref=e135]: INS
+            - text: Instruments
+          - generic [ref=e136]:
+            - strong [ref=e137]: VOC
+            - text: Vocals
+          - generic [ref=e138]:
+            - strong [ref=e139]: ECHO
+            - text: Echo
+          - generic [ref=e140]:
+            - strong [ref=e141]: RVB
+            - text: Reverb
+          - generic [ref=e142]:
+            - strong [ref=e143]: FX FLT
+            - text: FX Filter
+        - generic "Mixer view" [ref=e144]:
+          - button "EQ" [pressed] [ref=e145]
+          - button "STEM" [ref=e146]
+          - button "FX" [ref=e147]
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - generic [ref=e151]: A
+              - generic [ref=e152]: "-- BPM"
+            - generic [ref=e153]:
+              - 'generic "HI: High EQ" [ref=e154]':
+                - generic [ref=e155]:
+                  - strong [ref=e156]: HI
+                  - generic [ref=e157]: HIGH EQ
+                - button [ref=e158]
+              - 'generic "MID: Mid EQ" [ref=e159]':
+                - generic [ref=e160]:
+                  - strong [ref=e161]: MID
+                  - generic [ref=e162]: MID EQ
+                - button [ref=e163]
+              - 'generic "LOW: Low EQ" [ref=e164]':
+                - generic [ref=e165]:
+                  - strong [ref=e166]: LOW
+                  - generic [ref=e167]: LOW EQ
+                - button [ref=e168]
+              - 'generic "FLT: Tone Filter" [ref=e169]':
+                - generic [ref=e170]:
+                  - strong [ref=e171]: FLT
+                  - generic [ref=e172]: TONE FILTER
+                - button [ref=e173]
+            - generic [ref=e174]:
+              - generic [ref=e175]:
+                - button "MUTE" [ref=e176]
+                - button "SOLO" [ref=e177]
+                - button "RESET" [ref=e178]
+              - generic [ref=e180]:
+                - generic [ref=e181]:
+                  - generic "Output level meter" [ref=e182]: VU
+                  - generic "Output meter" [ref=e183]
+                - generic [ref=e184]:
+                  - generic "Channel volume fader" [ref=e185]: VOL
+                  - slider "Deck A volume" [ref=e186] [cursor=pointer]
+                  - generic [ref=e187]: 80%
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - generic [ref=e190]: B
+              - generic [ref=e191]: "-- BPM"
+            - generic [ref=e192]:
+              - 'generic "HI: High EQ" [ref=e193]':
+                - generic [ref=e194]:
+                  - strong [ref=e195]: HI
+                  - generic [ref=e196]: HIGH EQ
+                - button [ref=e197]
+              - 'generic "MID: Mid EQ" [ref=e198]':
+                - generic [ref=e199]:
+                  - strong [ref=e200]: MID
+                  - generic [ref=e201]: MID EQ
+                - button [ref=e202]
+              - 'generic "LOW: Low EQ" [ref=e203]':
+                - generic [ref=e204]:
+                  - strong [ref=e205]: LOW
+                  - generic [ref=e206]: LOW EQ
+                - button [ref=e207]
+              - 'generic "FLT: Tone Filter" [ref=e208]':
+                - generic [ref=e209]:
+                  - strong [ref=e210]: FLT
+                  - generic [ref=e211]: TONE FILTER
+                - button [ref=e212]
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - button "MUTE" [ref=e215]
+                - button "SOLO" [ref=e216]
+                - button "RESET" [ref=e217]
+              - generic [ref=e219]:
+                - generic [ref=e220]:
+                  - generic "Output level meter" [ref=e221]: VU
+                  - generic "Output meter" [ref=e222]
+                - generic [ref=e223]:
+                  - generic "Channel volume fader" [ref=e224]: VOL
+                  - slider "Deck B volume" [ref=e225] [cursor=pointer]
+                  - generic [ref=e226]: 80%
+        - generic [ref=e227]:
+          - generic [ref=e228]: A
+          - slider "Crossfader" [ref=e229] [cursor=pointer]
+          - generic [ref=e230]: B
+      - generic [ref=e232]:
+        - generic [ref=e233]:
+          - generic [ref=e234]: B
+          - generic [ref=e235]:
+            - generic [ref=e236]:
+              - generic [ref=e237]: DECK B
+              - generic [ref=e238]: No Track Loaded
+            - generic [ref=e239]:
+              - generic [ref=e240]: 0:00 / 0:00
+              - generic [ref=e241]: "-- BPM"
+              - generic [ref=e242]: "Key: --"
+              - generic [ref=e243]: "Neural: --"
+          - button "KEY LOCK" [ref=e244]
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - generic [ref=e254]: B
+            - generic [ref=e255]: DISC
+          - generic [ref=e256]:
+            - generic [ref=e257]:
+              - generic [ref=e258]: TRANSPORT
+              - generic [ref=e259]:
+                - button "CUE" [ref=e260]
+                - button "▶" [ref=e261]
+                - button "SYNC" [ref=e262]
+                - button "KEY MATCH" [ref=e263]
+              - generic [ref=e264]: "CUE: 頭出し / PLAY: 再生停止 / SYNC: BPM合わせ / KEY MATCH: キー合わせ"
+            - generic [ref=e265]:
+              - generic [ref=e266]: LOOP
+              - generic [ref=e267]:
+                - button "IN" [ref=e268]
+                - button "OUT" [ref=e269]
+                - button "LOOP" [ref=e270]
+                - button "SAVE" [ref=e271]
+                - button "1B" [ref=e272]
+                - button "2B" [ref=e273]
+                - button "4B" [ref=e274]
+                - button "8B" [ref=e275]
+                - button "16B" [ref=e276]
+              - generic [ref=e277]:
+                - button "1" [ref=e278]
+                - button "2" [ref=e279]
+                - button "3" [ref=e280]
+                - button "4" [ref=e281]
+              - generic [ref=e282]: "IN/OUT/LOOP: 再クリックでOFF / SAVE: ON後にMEM保存 / MEM: タップ読込・長押し削除"
+            - generic [ref=e283]:
+              - generic [ref=e284]: HOT CUE
+              - generic [ref=e285]:
+                - button "1-8" [ref=e286]
+                - button "9-16" [ref=e287]
+                - button "CLR" [ref=e288]
+              - generic [ref=e289]:
+                - button "1" [ref=e290]
+                - button "2" [ref=e291]
+                - button "3" [ref=e292]
+                - button "4" [ref=e293]
+                - button "5" [ref=e294]
+                - button "6" [ref=e295]
+                - button "7" [ref=e296]
+                - button "8" [ref=e297]
+              - generic [ref=e298]: "Hot Cue: 8PAD表示 / タップ=セット/ジャンプ / 長押し=解除 / CLR=次のタップで削除"
+            - generic [ref=e299]:
+              - generic [ref=e300]: DJ SHOTS
+              - generic [ref=e301]:
+                - button "HORN" [ref=e302]
+                - button "LASER" [ref=e303]
+                - button "CLAP" [ref=e304]
+                - button "IMPACT" [ref=e305]
+                - button "SIREN" [ref=e306]
+                - button "WHISTLE" [ref=e307]
+                - button "BELL" [ref=e308]
+                - button "RISER" [ref=e309]
+              - generic [ref=e310]: "DJ FX: 連打対応ワンタップ効果音（Party向けSIREN/WHISTLE/RISER追加）"
+          - generic [ref=e311]:
+            - generic [ref=e312]:
+              - generic [ref=e313]: TEMPO (速度)
+              - button "Tempo knob" [ref=e314]
+              - generic [ref=e315]: +0.0%
+            - generic [ref=e316]:
+              - generic [ref=e317]: KEY SHIFT (半音)
+              - button "Key shift knob" [ref=e318]
+              - generic [ref=e319]: KEY +0 st
+  - button "Choose File"
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic: LIBRARY
+          - generic: "Match: load tracks to get suggestions."
+        - generic:
+          - generic:
+            - generic:
+              - button "GRID"
+              - button "COMPACT"
+              - button "LIST"
+            - combobox "1ページの表示件数":
+              - option "12 / page"
+              - option "24 / page" [selected]
+              - option "48 / page"
+              - option "96 / page"
+          - textbox "Search tracks..."
+          - generic: + Add Files
+          - button "+ Add Files"
+      - generic:
+        - complementary:
+          - button "Library"
+          - button "History"
+          - button "Playlists"
+          - button "My Files"
+          - button "Downloaded"
+          - button "Neural Mix"
+        - generic:
+          - generic:
+            - generic:
+              - button "PREV" [disabled]
+              - generic: 1/1
+              - button "NEXT" [disabled]
+              - generic: 0 tracks
+            - generic [ref=e321]:
+              - generic [ref=e322]: Drop audio files here
+              - generic [ref=e323]: Supports iPad Files / local storage / drag & drop
+  - button "+ ADD FILES" [ref=e324]
