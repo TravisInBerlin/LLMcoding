@@ -1,181 +1,181 @@
 # WebDJ NEXUS
 
-ブラウザで動作する DJ ミックスアプリです。  
-2/4デッキ、Neural Mix系ステム操作、MIDI Learn、録音、ライブラリ、DJ SHOTS を搭載しています。
+ブラウザだけで動く DJ ミックスアプリです。  
+2/4 Deck、Auto Drop / Automix、MIDI Learn、Headphone CUE、録音、Hot Cue、Loop Memory、DJ SHOTS を搭載しています。
 
-## 動作環境
+---
 
-- Node.js 18 以上
-- Safari / Chrome / Edge (最新版)
-- MIDI機器使用時は Web MIDI API 対応ブラウザ
+## JP
 
-## セットアップ
+### 1分セットアップ（初回向け）
+
+必要環境:
+- Node.js 18+
+- Chrome / Edge / Safari（最新版）
+- MIDI 利用時は Web MIDI 対応ブラウザ
 
 ```bash
 npm install
 npm run dev
 ```
 
-- 開発URL: `http://localhost:5173`
-- LAN共有: `http://<PCのIP>:5173`
+開発URL（`npm run dev` 実行時に表示された URL を使用）:
+- Local 例: `http://localhost:5173`
+- LAN 例: `http://192.168.x.x:5173`
+  - ポートは `5173` 以外（`5174` など）になる場合があります
+  - 例: macOS は `ipconfig getifaddr en0` で IP を確認
 
-本番ビルド:
+本番確認:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## 最短スタート
+### クイックスタート
 
-1. 右下 `+ ADD FILES` から曲を取り込む
-2. `LIBRARY` の各曲で `A/B/C/D` を押してデッキにロード
-3. `PLAY` で再生
-4. 必要なら `SYNC` / `KEY MATCH` で合わせる
-5. クロスフェーダーか `AUTO DROP` で遷移
-6. 録音は `REC START`
+1. `+ ADD FILES` で楽曲を追加  
+2. ライブラリで `A/B/C/D` を押してロード  
+3. `PLAY` で再生開始  
+4. 必要に応じて `SYNC` / `KEY MATCH`  
+5. `AUTO DROP` またはクロスフェーダーで遷移  
+6. `REC START` で録音開始/停止
 
-## 画面構成
+### 主要機能（最新実装）
 
-- ヘッダー: デッキ表示、波形表示、ライブラリ表示、AUTO DROP、FEATURES、録音
-- 左右デッキ: 波形、TRANSPORT、LOOP、HOT CUE、DJ SHOTS、TEMPO/KEY
-- 中央ミキサー: EQ/Stem/FX、VOL/VU、XY FX、クロスフェーダー
-- 下部ライブラリ: Library / History / Playlists / My Files / Downloaded / Neural Mix
+- `2 DECK / 4 DECK`: レイアウト切り替え
+- `WAVE: H / WAVE: V`: 波形表示の向き切り替え
+- `LIB`: ライブラリ表示トグル
+- `AUTO DROP`: 選択ルート（`A->B / B->A / C->D / D->C`）で1回遷移
+- `AUTOMIX`: 12秒間隔で Auto Drop を自動実行（ON/OFF）
+- `XFADE: SMOOTH / POWER / NEURAL`: トランジション特性切り替え
+- `REC START`: マスター出力録音（ブラウザにより `webm` / `m4a` など）
 
-## ヘッダー操作
+### Deck 機能
 
-- `4 DECK` / `2 DECK`: 2デッキ・4デッキ切替
-- `WAVE: H` / `WAVE: V`: 波形の水平/垂直切替
-- `LIB: ON/OFF`: ライブラリ表示切替
-- `AUTO: A->B / B->A / C->D / D->C`: AUTO DROPルート選択
-- `AUTO DROP`: 選択ルートで自動遷移を1回実行
-- `FEATURES`: MIDI/CUE/XFADE/AUTOMIX 等の詳細パネル表示
-- `REC START`: マスター録音の開始/停止
-
-## FEATURES パネル
-
-- `MIDI CONNECT`: MIDI接続
-- `CUE OUT`: ヘッドホンCUE初期化
-- `CUE: ...`: CUE出力先選択（setSinkId対応時）
-- `CUE A OFF / CUE B OFF`: デッキ別CUE送出
-- `CUE LV`: CUE音量
-- `Learn: ...`: MIDI Learn対象
-- `MIDI LEARN` / `LEARN CANCEL`
-- `MIXER HIDE`
-- `XFADE: SMOOTH / POWER / NEURAL`
-- `GUIDE`
-- `AUTOMIX ON/OFF`
-
-## デッキ操作
-
-### TRANSPORT
-
-- `CUE`: 先頭へ戻る
+#### Transport
+- `CUE`: 先頭キューへ戻る
 - `PLAY`: 再生/停止
-- `SYNC`: 他デッキBPMへ同期
-- `KEY MATCH`: 他デッキキーへ同期
-- `KEY LOCK`: テンポ変更時の音程維持
+- `SYNC`: 対象デッキ BPM に同期
+- `KEY MATCH`: 対象デッキ Key に同期
+- `KEY LOCK`: テンポ変更時にキー維持
 
-### LOOP
+#### Loop
+- `IN / OUT / LOOP`: 手動ループ範囲の作成/有効化
+- `1B / 2B / 4B / 8B / 16B`: オートループ
+- `SAVE` + `MEM 1-4`: ループメモリ保存/読み込み
+- `MEM` 長押し: 保存スロット削除
 
-- `IN` / `OUT` / `LOOP`: ループ範囲と有効化（再クリックでOFF）
-- `SAVE`: 保存待機ON/OFF（`SAVE ON`）
-- `MEM 1-4`: ループメモリスロット
-  - `SAVE ON`中にタップ: 現在ループを保存
-  - 通常タップ: 保存済みループを読込
-  - 長押し: スロット削除
-- `1B / 2B / 4B / 8B / 16B`: オートループ長
+#### Hot Cue
+- 2バンク（`1-8`, `9-16`）、表示は常時8パッド
+- タップ: 未設定はセット / 設定済みはジャンプ
+- 長押し: 解除
+- `CLR`: 次に押した設定済みキューを削除
 
-### HOT CUE (実装更新)
+#### DJ SHOTS
+- ワンタップ効果音: `HORN / LASER / CLAP / IMPACT / SIREN / WHISTLE / BELL / RISER`
 
-- バンク: `1-8` / `9-16`
-- 常時 8 PAD 表示
-- PAD操作:
-  - 未設定PADタップ: セット
-  - 設定済PADタップ: ジャンプ
-  - PAD長押し: 解除
-- `CLR`: ON時、次に押した設定済PADを削除
+### FEATURES パネル
 
-### DJ SHOTS (実装更新)
+- `MIDI CONNECT`: MIDI 接続
+- `Learn: ...` + `MIDI LEARN`: 任意の操作を学習割り当て
+- `LEARN CANCEL` または `Esc`: 学習モード解除
+- `CUE OUT`: ヘッドホン CUE 初期化
+- `OUTPUT SCAN`: 出力デバイス再検出
+- `CUE A/B`: デッキ別に CUE モニター ON/OFF
+- `CUE LV`: CUE 音量
+- `MIXER HIDE`: ミキサー表示切り替え
+- `GUIDE`: 操作ガイド表示切り替え
 
-ワンタップで効果音:
+### スクリーンショット / GIF
 
-- `HORN`
-- `LASER`
-- `CLAP`
-- `IMPACT`
-- `SIREN`
-- `WHISTLE`
-- `BELL`
-- `RISER`
+> 画像ファイルを追加したら、以下のパスを差し替えてください。
 
-## AUTO DROP と AUTOMIX
+```md
+![Main UI](docs/media/main-ui.png)
+![Deck Controls](docs/media/deck-controls.png)
+![Automix Demo](docs/media/automix-demo.gif)
+```
 
-### AUTO DROP
+推奨:
+- 静止画: `docs/media/*.png`
+- デモ: `docs/media/*.gif`
 
-- 手動一発遷移
-- ルート選択に応じて `A->B / B->A / C->D / D->C` で実行
-- 遷移時にBPM/Key補正とFX補助を適用
+### トラブルシュート
 
-### AUTOMIX ON の挙動
+#### Safari で音が出ない
+- 最初に画面を1回クリック/タップして AudioContext を有効化
+- 自動再生制限と出力デバイス設定を確認
 
-- 12秒ごとに `AUTO` で選択中のルートを自動実行
-- 実行フロー:
-  1. ルート対象の2デッキがロード済みか確認
-  2. 両方停止ならソース側を再生開始
-  3. ターゲット未再生ならBPM同期・キー補正して再生
-  4. XFADEスタイルに応じたFXでフェード遷移
-- OFFで自動実行停止
+#### MIDI が接続できない
+- ブラウザが Web MIDI 対応か確認
+- 一度 `MIDI CONNECT` を押して権限許可
 
-## MIDI Learn
+#### CUE 出力先を分けられない
+- `setSinkId` 未対応ブラウザではデフォルト出力のみ
+- `OUTPUT SCAN` 実行後に出力デバイス選択
 
-割当対象:
+---
 
-- Play/Cue/Sync/KeyMatch (A/B)
-- Crossfader
-- Volume/Tempo/Filter (A/B)
-- Stem Vocal/Drums/Instruments (A/B)
+## EN
 
-手順:
+### 1-minute setup
 
-1. `MIDI CONNECT`
-2. `Learn: ...` で対象選択
-3. `MIDI LEARN`
-4. コントローラーを操作
-
-## 録音
-
-- `REC START` で開始
-- 再度押すと停止し自動ダウンロード
-- 出力拡張子は環境で変動 (`webm` / `m4a` など)
-
-## トラブルシュート
-
-### ボタン反応がおかしい
+Requirements:
+- Node.js 18+
+- Latest Chrome / Edge / Safari
+- Web MIDI compatible browser if you use MIDI controllers
 
 ```bash
-pkill -f vite
+npm install
 npm run dev
 ```
 
-その後 `Shift + Reload` でハードリロード。
+Dev URLs (use the URLs printed by `npm run dev`):
+- Local example: `http://localhost:5173`
+- LAN example: `http://192.168.x.x:5173`
+  - The port may change (`5174`, etc.) if the default port is already in use
+  - Example (macOS): run `ipconfig getifaddr en0` to check your current IP
 
-### Safari で無音
+Production preview:
 
-- 最初に画面を1回タップして AudioContext を開始
-- 出力先デバイスとブラウザ自動再生設定を確認
+```bash
+npm run build
+npm run preview
+```
 
-### 4 DECK 切替できない
+### Quick start
 
-- 古いポートに接続していないか確認
-- `http://localhost:5173` を再読込
+1. Import tracks with `+ ADD FILES`  
+2. Load tracks to `A/B/C/D` from the library  
+3. Press `PLAY`  
+4. Use `SYNC` / `KEY MATCH` as needed  
+5. Transition via `AUTO DROP` or crossfader  
+6. Record with `REC START`
 
-## コード構成 (リファクタリング後)
+### Core features
 
-- `src/main.ts`: UI初期化とイベント配線
-- `src/audio/AutoDrop.ts`: AUTO DROP/AUTOMIX遷移ロジック
-- `src/audio/SfxEngine.ts`: DJ SHOTS効果音生成
-- `src/audio/cuePalette.ts`: HOT CUEカラー共通定義
-- `src/ui/*`: Deck/Mixer/Library UI
+- 2/4 deck layout toggle
+- Horizontal / vertical waveform mode
+- Auto Drop routes (`A->B / B->A / C->D / D->C`)
+- Automix loop (runs Auto Drop every 12s)
+- Transition styles (`SMOOTH / POWER / NEURAL`)
+- Headphone CUE routing (browser support dependent)
+- MIDI Learn with persistent mapping in `localStorage`
+- Deck tools: Hot Cue (16 slots), Loop Memory (4 slots), DJ SHOTS, Key Lock, Sync, Key Match
+- Master recording export (`webm`, `m4a`, etc. depending on browser)
 
-この構成により、機能追加時の影響範囲を分離しやすくしています。
+### Screenshots / GIF
+
+```md
+![Main UI](docs/media/main-ui.png)
+![Deck Controls](docs/media/deck-controls.png)
+![Automix Demo](docs/media/automix-demo.gif)
+```
+
+### Source structure
+
+- `src/main.ts`: app bootstrap, header controls, routing/events, recording, CUE output
+- `src/ui/DeckUI.ts`: deck controls, hot cue, loop memory, DJ SHOTS, jog/knob UI
+- `src/audio/AutoDrop.ts`: auto transition logic for Auto Drop / Automix
+- `src/midi/MidiController.ts`: MIDI connect + learn + mapping dispatch
