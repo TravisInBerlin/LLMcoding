@@ -419,6 +419,7 @@ const applyDeckMode = (): void => {
   if (deckC) deckC.style.display = deckMode === 4 ? '' : 'none';
   if (deckD) deckD.style.display = deckMode === 4 ? '' : 'none';
   statusBadge.textContent = deckMode === 4 ? 'Deck mode: 4 Deck' : 'Deck mode: 2 Deck';
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 };
 
 const applyWaveformMode = (): void => {

@@ -6,7 +6,7 @@ const CUES_PER_BANK = 8;
 const CUE_BANK_COUNT = 2;
 const LOOP_SLOT_COUNT = 4;
 const SHOT_BUTTONS = [
-  { id: 'airhorn', label: 'HORN', title: 'Airhorn one-shot' },
+  { id: 'airhorn', label: 'AIR HORN', title: 'Airhorn one-shot' },
   { id: 'laser', label: 'LASER', title: 'Laser one-shot' },
   { id: 'clap', label: 'CLAP', title: 'Clap one-shot' },
   { id: 'impact', label: 'IMPACT', title: 'Impact one-shot' },
@@ -106,7 +106,7 @@ export class DeckUI {
           </div>
 
           <div class="deck-controls-stack">
-            <div class="control-group">
+            <div class="control-group control-transport">
               <div class="control-label">TRANSPORT</div>
               <div class="transport-row">
                 <button class="btn btn-cue" id="cue-btn-${side}" title="先頭キューへ戻る">CUE</button>
@@ -117,7 +117,7 @@ export class DeckUI {
               <div class="control-explain">CUE: 頭出し / PLAY: 再生停止 / SYNC: BPM合わせ / KEY MATCH: キー合わせ</div>
             </div>
 
-            <div class="control-group">
+            <div class="control-group control-loop">
               <div class="control-label">LOOP</div>
               <div class="loop-controls">
                 <button class="btn btn-loop btn-muted" id="loop-in-${side}" title="ループ開始点 ON / OFF">IN</button>
@@ -134,7 +134,7 @@ export class DeckUI {
               <div class="control-explain">IN/OUT/LOOP: 再クリックでOFF / SAVE: ON後にMEM保存 / MEM: タップ読込・長押し削除</div>
             </div>
 
-            <div class="control-group">
+            <div class="control-group control-hotcue">
               <div class="control-label">HOT CUE</div>
               <div class="cue-bank-row">
                 ${Array.from({ length: CUE_BANK_COUNT }, (_, i) => {
@@ -150,8 +150,8 @@ export class DeckUI {
               <div class="control-explain">Hot Cue: 8PAD表示 / タップ=セット/ジャンプ / 長押し=解除 / CLR=次のタップで削除</div>
             </div>
 
-            <div class="control-group">
-              <div class="control-label">DJ SHOTS</div>
+            <div class="control-group control-sfx">
+              <div class="control-label">SFX PAD / 効果音</div>
               <div class="sfx-shot-row">
                 ${SHOT_BUTTONS.map((shot) => `<button class="btn btn-sfx-shot" data-sfx="${shot.id}" id="sfx-${shot.id}-${side}" title="${shot.title}">${shot.label}</button>`).join('')}
               </div>
